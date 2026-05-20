@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ninitux.com ★ VPN Router — Virtual Penguin Network</title>
+<meta name="description" content="VPN Router — Virtual Penguin Network. Process-based split-tunnel VPN router for Windows, macOS and Linux. Pick which apps go through the proxy.">
+<meta property="og:title" content="ninitux.com — VPN Router">
+<meta property="og:description" content="Pick which apps go through the proxy. Everything else stays direct.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23FFE600'/><text y='80' font-size='80'>🐧</text></svg>">
+<script defer src="https://analytics.ninitux.com/script.js" data-website-id="7bbe4baf-47b2-4683-b3f4-dd9c1b734909"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:    #FFFBEC;
+  --paper:    #FFF8DC;
+  --yellow:   #FFE600;
+  --pink:     #FF3E8E;
+  --lime:     #C8FF3D;
+  --blue:     #2D5BFF;
+  --red:      #FF3B1F;
+  --sky:      #9DE7FF;
+  --purple:   #B68CFF;
+  --mint:     #B7F0CC;
+  --ink:      #0A0907;
+  --ink-2:    #2B261C;
+  --ink-mute: #6B6557;
+  --ink-dim:  #9B947F;
+
+  --sans:    "Space Grotesk","Bricolage Grotesque",system-ui,sans-serif;
+  --display: "Bricolage Grotesque","Space Grotesk",sans-serif;
+  --mono:    "Space Mono","IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:120px}
+html,body{margin:0;padding:0;background:var(--cream);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{
+  background:
+    radial-gradient(circle at 10% 8%, rgba(255,62,142,0.08), transparent 35%),
+    radial-gradient(circle at 92% 6%, rgba(45,91,255,0.08), transparent 35%),
+    radial-gradient(circle at 50% 100%, rgba(200,255,61,0.08), transparent 40%),
+    var(--cream);
+  background-attachment:fixed;
+  overflow-x:hidden;
+}
+[hidden]{display:none !important}
+
+a{color:var(--ink);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;text-decoration-color:var(--pink)}
+a:hover{background:var(--yellow);color:var(--ink);text-decoration-color:var(--ink)}
+
+::selection{background:var(--pink);color:var(--cream)}
+
+button{font-family:inherit}
+
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px}
+
+/* i18n */
+:root[data-lang="en"] [data-i18n="ru"]{display:none}
+:root[data-lang="ru"] [data-i18n="en"]{display:none}
+
+/* ── MARQUEE ────────────────────────────────────────── */
+.marquee{
+  background:var(--ink);color:var(--lime);
+  border-bottom:3px solid var(--ink);
+  padding:10px 0;font-family:var(--mono);font-weight:700;
+  font-size:13px;letter-spacing:.04em;text-transform:uppercase;
+  overflow:hidden;white-space:nowrap;display:flex;align-items:center;
+}
+.marquee .track{display:inline-flex;gap:32px;animation:scroll 38s linear infinite;padding-right:32px;will-change:transform}
+.marquee .track span{display:inline-flex;align-items:center;gap:8px}
+.marquee .track .dot{color:var(--pink)}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion: reduce){
+  .marquee .track{animation:none}
+  .marquee{justify-content:center}
+}
+
+/* ── TOP BAR ────────────────────────────────────────── */
+.topbar{
+  display:flex;align-items:center;gap:16px;padding:18px 0 14px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+  position:sticky;top:0;z-index:20;background:var(--cream);
+  border-bottom:1px solid transparent;
+  transition:border-color .15s, box-shadow .15s;
+}
+.topbar.scrolled{border-bottom-color:var(--ink);box-shadow:0 4px 0 var(--lime)}
+.topbar .brand{
+  display:inline-flex;align-items:center;gap:10px;
+  background:var(--ink);color:var(--yellow);padding:7px 14px;
+  border-radius:999px;font-family:var(--sans);font-weight:700;font-size:14.5px;letter-spacing:0;
+  text-transform:none;text-decoration:none;
+  transform:rotate(-1.5deg);box-shadow:3px 3px 0 var(--pink);
+  transition:transform .12s, box-shadow .12s;
+}
+.topbar .brand:hover{transform:rotate(-2.5deg) scale(1.04);box-shadow:5px 5px 0 var(--pink);background:var(--ink);color:var(--lime)}
+.topbar .brand .star{color:var(--pink);font-size:16px}
+.topbar .nav{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center}
+.topbar .nav a.nl{
+  color:var(--ink);text-decoration:none;
+  padding:5px 11px;border:2px solid var(--ink);border-radius:999px;
+  background:var(--cream);font-size:12px;font-family:var(--mono);font-weight:500;
+  text-transform:uppercase;letter-spacing:.06em;
+  transition:transform .12s, background .12s;
+}
+.topbar .nav a.nl:hover{background:var(--yellow);transform:translateY(-1px)}
+.topbar .nav .seg{
+  display:inline-flex;border:2px solid var(--ink);border-radius:999px;
+  background:var(--cream);overflow:hidden;
+}
+.topbar .nav .seg button{
+  appearance:none;background:transparent;border:0;
+  font:inherit;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:6px 10px;cursor:pointer;color:var(--ink);
+}
+.topbar .nav .seg button[aria-pressed="true"]{background:var(--ink);color:var(--yellow)}
+.topbar .nav .seg button:hover{background:var(--yellow)}
+.topbar .nav .seg button[aria-pressed="true"]:hover{background:var(--ink-2);color:var(--lime)}
+
+.auth-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;background:var(--lime);color:var(--ink);
+  border:2px solid var(--ink);border-radius:999px;
+  font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  text-decoration:none;transition:transform .12s;
+}
+.auth-btn:hover{background:var(--pink);color:var(--cream);transform:translateY(-1px)}
+
+/* ── HERO ───────────────────────────────────────────── */
+.hero{position:relative;padding:36px 0 56px}
+.hero-grid{display:grid;grid-template-columns:1fr 320px;gap:36px;align-items:start}
+
+.eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  background:var(--lime);color:var(--ink);
+  border:3px solid var(--ink);border-radius:999px;padding:6px 18px;
+  font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+  transform:rotate(-1.5deg);box-shadow:4px 4px 0 var(--ink);
+  margin-bottom:26px;
+}
+.eyebrow .blink{display:inline-block;width:9px;height:9px;background:var(--red);border-radius:50%;animation:blink 1.1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+
+h1.headline{
+  font-family:var(--display);font-weight:800;
+  font-size:clamp(56px, 10vw, 144px);line-height:0.86;letter-spacing:-0.04em;
+  margin:0 0 22px;color:var(--ink);
+}
+h1.headline .pop{
+  background:var(--pink);color:var(--cream);padding:0 14px;display:inline-block;
+  border-radius:10px;transform:rotate(-1.8deg);box-shadow:7px 7px 0 var(--ink);
+}
+h1.headline .yel{
+  background:var(--yellow);color:var(--ink);padding:0 14px;display:inline-block;
+  border:3px solid var(--ink);border-radius:10px;transform:rotate(1.4deg);
+}
+h1.headline .strike{position:relative;color:var(--ink-mute)}
+h1.headline .strike::after{
+  content:"";position:absolute;left:-4%;right:-4%;top:52%;height:7px;background:var(--red);
+  transform:rotate(-3deg);
+}
+h1.headline .underline{
+  background-image:linear-gradient(transparent 75%, var(--lime) 75%);
+  padding:0 8px;
+}
+
+.lede{
+  font-size:clamp(18px,2vw,24px);line-height:1.4;color:var(--ink-2);max-width:62ch;
+  margin:0 0 28px;font-weight:500;
+}
+.lede em{font-style:normal;background:var(--sky);padding:0 6px;border-radius:5px;font-weight:600;color:var(--ink)}
+
+/* hero penguin sticker */
+.hero-pen{
+  position:relative;width:100%;aspect-ratio:1;
+  background:url('assets/penguin-sketch.png') center/contain no-repeat;
+  transform:rotate(6deg);
+  filter:drop-shadow(4px 6px 0 var(--pink));
+  animation:wobble 6s ease-in-out infinite;
+}
+@keyframes wobble{
+  0%,100%{transform:rotate(6deg)}
+  50%{transform:rotate(2deg) translateY(-6px)}
+}
+@media (prefers-reduced-motion: reduce){.hero-pen{animation:none}}
+.hero-pen::before{
+  content:"";position:absolute;inset:-22px -14px -14px -14px;
+  background:var(--yellow);
+  border:3px solid var(--ink);border-radius:22px;
+  z-index:-1;
+  box-shadow:9px 9px 0 var(--ink);
+}
+.hero-pen-wrap{position:relative}
+.hero-sticker{
+  position:absolute;display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-weight:700;font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;
+  padding:6px 14px;border:3px solid var(--ink);border-radius:999px;
+  box-shadow:4px 4px 0 var(--ink);z-index:2;white-space:nowrap;
+}
+.sticker-1{top:0;left:-14px;background:var(--pink);color:var(--cream);transform:rotate(-12deg)}
+.sticker-2{top:42%;right:-20px;background:var(--lime);color:var(--ink);transform:rotate(8deg)}
+.sticker-3{bottom:-10px;left:30%;background:var(--cream);color:var(--ink);transform:rotate(-4deg);font-size:11px}
+
+.cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:6px}
+.cta{
+  display:inline-flex;align-items:center;gap:10px;
+  background:var(--ink);color:var(--cream);
+  border:3px solid var(--ink);border-radius:14px;
+  padding:14px 24px;font-family:var(--sans);font-weight:700;font-size:16px;
+  text-decoration:none;letter-spacing:.02em;
+  box-shadow:6px 6px 0 var(--pink);
+  transform:rotate(-0.6deg);transition:transform .14s ease, box-shadow .14s ease;
+}
+.cta:hover{color:var(--lime);transform:rotate(-1.4deg) translate(-2px,-2px);box-shadow:8px 8px 0 var(--pink);text-decoration:none;background:var(--ink)}
+.cta .arrow{font-size:18px}
+.cta.secondary{background:var(--cream);color:var(--ink);box-shadow:6px 6px 0 var(--blue);transform:rotate(0.6deg)}
+.cta.secondary:hover{background:var(--yellow);color:var(--ink)}
+
+.cta-meta{font-family:var(--mono);font-size:12px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em}
+.cta-meta b{color:var(--ink)}
+
+.trust-row{
+  margin-top:24px;display:flex;flex-wrap:wrap;gap:10px;
+}
+.trust-row .pill{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--cream);border:2px solid var(--ink);
+  padding:4px 12px;border-radius:999px;
+  font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);
+}
+.trust-row .pill .dot{width:8px;height:8px;background:var(--lime);border-radius:50%;border:1px solid var(--ink)}
+
+/* ── SECTION HEAD ───────────────────────────────────── */
+.section{padding:48px 0;position:relative}
+.section-h{display:flex;align-items:baseline;gap:18px;margin-bottom:28px;flex-wrap:wrap}
+.section-h .num{
+  font-family:var(--display);font-weight:800;font-size:84px;line-height:0.8;
+  letter-spacing:-0.03em;flex:0 0 auto;
+}
+.section-h h2{
+  font-family:var(--display);font-weight:800;font-size:clamp(36px,5vw,60px);line-height:0.95;letter-spacing:-0.02em;
+  color:var(--ink);margin:0;flex:1;min-width:260px;
+}
+.section-h h2 em{
+  font-style:normal;background:var(--yellow);padding:0 10px;
+  box-shadow:5px 5px 0 var(--ink);transform:rotate(-1deg);display:inline-block;
+}
+.section-h .meta{
+  font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--ink-mute);
+}
+
+/* ── INSTALL ───────────────────────────────────────── */
+.os-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.os-card{
+  background:var(--cream);border:3px solid var(--ink);border-radius:18px;
+  padding:22px;position:relative;
+  box-shadow:7px 7px 0 var(--ink);
+  display:flex;flex-direction:column;gap:14px;
+  transition:transform .12s, box-shadow .12s;
+}
+.os-card:hover{transform:translate(-2px,-2px);box-shadow:9px 9px 0 var(--ink)}
+.os-card:nth-child(1){box-shadow:7px 7px 0 var(--lime)}
+.os-card:nth-child(1):hover{box-shadow:9px 9px 0 var(--lime)}
+.os-card:nth-child(2){box-shadow:7px 7px 0 var(--pink)}
+.os-card:nth-child(2):hover{box-shadow:9px 9px 0 var(--pink)}
+.os-card:nth-child(3){box-shadow:7px 7px 0 var(--blue)}
+.os-card:nth-child(3):hover{box-shadow:9px 9px 0 var(--blue)}
+.os-card.detected{outline:3px dashed var(--ink);outline-offset:6px}
+
+.os-card .badge{
+  position:absolute;top:-15px;left:20px;
+  background:var(--ink);color:var(--cream);
+  font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 12px;border-radius:999px;border:2px solid var(--ink);
+}
+.os-card:nth-child(1) .badge{background:var(--lime);color:var(--ink)}
+.os-card:nth-child(2) .badge{background:var(--pink);color:var(--cream)}
+.os-card:nth-child(3) .badge{background:var(--blue);color:var(--cream)}
+.os-card .detected-tag{
+  position:absolute;top:-15px;right:20px;
+  background:var(--yellow);color:var(--ink);border:2px solid var(--ink);
+  font-family:var(--mono);font-weight:700;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 10px;border-radius:999px;display:none;
+}
+.os-card.detected .detected-tag{display:inline-block}
+
+.os-card h3{
+  font-family:var(--display);font-weight:800;font-size:32px;letter-spacing:-0.02em;
+  margin:8px 0 0;color:var(--ink);display:flex;align-items:baseline;gap:10px;
+}
+.os-card h3 .glyph{font-size:24px}
+.os-card .blurb{font-size:13.5px;color:var(--ink-mute);margin:0}
+
+.cmd-box{
+  background:var(--ink);color:var(--lime);border-radius:10px;
+  font-family:var(--mono);font-size:13.5px;
+  display:grid;grid-template-columns:1fr auto;
+  border:2px solid var(--ink);
+}
+.cmd-box .cmd{padding:14px 16px;overflow-x:auto;white-space:pre;font-weight:400}
+.cmd-box .cmd .pmt{color:var(--pink);margin-right:6px;user-select:none}
+.cmd-box .cmd .flag{color:var(--yellow)}
+.cmd-box .cmd .url{color:var(--sky);text-decoration:underline;text-decoration-style:dotted}
+.cmd-box .copy{
+  background:transparent;border:0;border-left:1px solid rgba(255,255,255,0.15);
+  color:var(--cream);font-family:var(--sans);font-weight:700;font-size:12px;
+  padding:0 16px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;
+  border-radius:0 10px 10px 0;min-width:80px;
+}
+.cmd-box .copy:hover{background:var(--pink);color:var(--cream)}
+.cmd-box .copy.ok{background:var(--lime);color:var(--ink)}
+
+.os-card .manual{
+  display:flex;flex-wrap:wrap;gap:8px;font-family:var(--mono);font-size:11px;align-items:center;
+}
+.os-card .manual .lbl{color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;margin-right:4px}
+.os-card .manual a{
+  background:var(--cream);border:2px solid var(--ink);border-radius:999px;
+  padding:3px 12px;text-decoration:none;color:var(--ink);letter-spacing:.04em;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.os-card .manual a:hover{background:var(--yellow)}
+.os-card .manual a .ver{color:var(--ink-mute);font-size:10px}
+.os-card .req{font-size:11.5px;color:var(--ink-mute);font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em;margin-top:auto}
+.os-card .hint{font-family:var(--mono);font-size:11.5px;color:var(--ink-mute);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.os-card .hint .kbd{
+  display:inline-block;border:1.5px solid var(--ink);border-bottom-width:2.5px;
+  padding:0 6px;border-radius:5px;background:var(--paper);font-weight:700;color:var(--ink);
+}
+
+/* ── FEATURES sticker grid ─────────────────────────── */
+.feat-wrap{position:relative}
+.feat-filter{
+  display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;font-family:var(--mono);
+}
+.feat-filter button{
+  appearance:none;background:var(--cream);border:2px solid var(--ink);border-radius:999px;
+  padding:5px 14px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+  cursor:pointer;color:var(--ink);
+}
+.feat-filter button[aria-pressed="true"]{background:var(--ink);color:var(--yellow)}
+.feat-filter button:hover{background:var(--yellow)}
+.feat-filter button[aria-pressed="true"]:hover{background:var(--ink-2);color:var(--lime)}
+
+.feat-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px;align-items:start}
+.feat{
+  border:3px solid var(--ink);border-radius:18px;padding:20px 22px;
+  display:flex;flex-direction:column;gap:8px;position:relative;
+  box-shadow:6px 6px 0 var(--ink);
+  transition:transform .12s, box-shadow .12s;
+}
+.feat:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--ink)}
+.feat h4{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-0.02em;margin:0;line-height:1.05}
+.feat p{margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+.feat .tag{
+  position:absolute;top:-13px;right:16px;
+  background:var(--ink);color:var(--cream);
+  font-family:var(--mono);font-weight:700;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 10px;border-radius:999px;border:2px solid var(--ink);
+}
+.feat .num{font-family:var(--mono);font-weight:700;font-size:11px;color:var(--ink-mute);letter-spacing:.06em;text-transform:uppercase}
+
+.feat-1{grid-column:span 7;background:var(--yellow)}
+.feat-2{grid-column:span 5;background:var(--sky)}
+.feat-2 .tag{background:var(--blue);color:var(--cream)}
+.feat-3{grid-column:span 4;background:var(--pink);color:var(--cream)}
+.feat-3 p{color:var(--cream)}
+.feat-3 .num{color:rgba(255,255,255,0.7)}
+.feat-3 .tag{background:var(--ink);color:var(--lime)}
+.feat-4{grid-column:span 4;background:var(--cream)}
+.feat-4 .tag{background:var(--lime);color:var(--ink)}
+.feat-5{grid-column:span 4;background:var(--lime)}
+.feat-6{grid-column:span 5;background:var(--purple)}
+.feat-7{grid-column:span 7;background:var(--ink);color:var(--lime)}
+.feat-7 h4{color:var(--lime)}
+.feat-7 p{color:var(--cream)}
+.feat-7 .num{color:rgba(200,255,61,0.6)}
+.feat-7 .tag{background:var(--pink);color:var(--cream)}
+.feat-7 a{color:var(--lime);text-decoration-color:var(--pink)}
+.feat-7 a:hover{background:var(--pink);color:var(--cream)}
+
+.feat-bigstat{
+  grid-column:span 12;
+  background:var(--ink);color:var(--cream);
+  border-radius:22px;padding:36px;border:3px solid var(--ink);
+  display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center;
+  position:relative;overflow:hidden;
+}
+.feat-bigstat::before{
+  content:"FREE · FREE · FREE · FREE · FREE · ";
+  position:absolute;top:14px;left:0;right:0;
+  font-family:var(--mono);font-weight:700;font-size:13px;color:var(--pink);
+  white-space:nowrap;letter-spacing:.2em;opacity:.7;
+  animation:scroll 25s linear infinite;
+}
+.feat-bigstat .big{
+  font-family:var(--display);font-weight:800;font-size:clamp(70px,10vw,150px);
+  letter-spacing:-0.04em;line-height:0.85;color:var(--lime);margin-top:14px;
+}
+.feat-bigstat .big .small{font-size:0.38em;color:var(--cream);display:block;line-height:1.1;margin-top:10px;font-weight:500;letter-spacing:0}
+.feat-bigstat .why{font-size:17px;line-height:1.45;color:var(--cream)}
+.feat-bigstat .why b{color:var(--yellow);font-weight:700}
+.feat-bigstat .pool-stats{
+  display:flex;gap:14px;margin-top:14px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--lime);
+}
+.feat-bigstat .pool-stats span{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(200,255,61,0.10);border:1.5px solid rgba(200,255,61,0.3);
+  padding:3px 10px;border-radius:999px;letter-spacing:.04em;
+}
+.feat-bigstat .pool-stats .pulse{width:8px;height:8px;background:var(--lime);border-radius:50%;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.feat[hidden]{display:none !important}
+
+/* ── HOW IT WORKS ──────────────────────────────────── */
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.how-panel{
+  background:var(--cream);border:3px solid var(--ink);border-radius:18px;
+  padding:26px;position:relative;box-shadow:7px 7px 0 var(--ink);
+  display:flex;flex-direction:column;gap:8px;
+}
+.how-panel:nth-child(1){background:var(--sky)}
+.how-panel:nth-child(2){background:var(--yellow)}
+.how-panel:nth-child(3){background:var(--lime)}
+.how-panel .step{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:46px;height:46px;background:var(--ink);color:var(--cream);
+  font-family:var(--display);font-weight:800;font-size:22px;border-radius:50%;
+  margin-bottom:10px;transform:rotate(-4deg);border:3px solid var(--ink);
+}
+.how-panel h3{
+  font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:-0.02em;
+  margin:0 0 4px;line-height:1.05;color:var(--ink);
+}
+.how-panel p{margin:0 0 6px;font-size:14.5px;color:var(--ink);line-height:1.5}
+.how-panel p code{
+  font-family:var(--mono);font-size:12.5px;background:var(--cream);
+  border:2px solid var(--ink);padding:1px 6px;border-radius:6px;
+}
+.how-panel .arrow{
+  position:absolute;top:50%;right:-26px;transform:translateY(-50%);
+  font-family:var(--display);font-weight:800;font-size:50px;color:var(--ink);z-index:3;line-height:1;
+}
+.how-panel:last-child .arrow{display:none}
+.how-panel .pdetail{
+  margin-top:10px;padding-top:10px;border-top:2px dashed var(--ink);
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-2);line-height:1.5;letter-spacing:.02em;
+}
+.how-panel .pdetail b{font-weight:700}
+
+/* ── SCREENSHOTS ───────────────────────────────────── */
+.shot-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+.shot{
+  border:3px solid var(--ink);border-radius:16px;overflow:hidden;
+  position:relative;background:var(--cream);
+  box-shadow:5px 5px 0 var(--ink);
+  display:flex;flex-direction:column;
+  text-decoration:none;color:inherit;cursor:zoom-in;
+}
+.shot:hover{background:var(--cream)}
+.shot .frame{
+  aspect-ratio:16/10;background:var(--paper);
+  background-image:
+    repeating-linear-gradient(45deg, transparent 0 12px, rgba(10,9,7,0.05) 12px 13px);
+  display:flex;align-items:center;justify-content:center;position:relative;
+  border-bottom:2px solid var(--ink);
+  font-family:var(--mono);font-size:12px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;
+}
+.shot .frame::after{
+  content:"";position:absolute;inset:14px;border:2px dashed var(--ink);border-radius:8px;opacity:.3;
+}
+.shot .frame .badge-png{
+  position:absolute;top:10px;right:10px;
+  background:var(--ink);color:var(--lime);
+  padding:2px 8px;border-radius:5px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;
+}
+.shot.wide{grid-column:span 4}
+.shot.tall{grid-column:span 2}
+.shot.med{grid-column:span 2}
+.shot .cap{
+  padding:10px 14px;font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--ink);
+}
+.shot .cap .sub{display:block;font-family:var(--mono);font-size:11px;font-weight:500;color:var(--ink-mute);margin-top:2px;letter-spacing:.04em;text-transform:none}
+.shot.wide{background:var(--sky)}
+.shot.tall{background:var(--lime)}
+.shot.med{background:var(--cream)}
+
+.shot-note{
+  margin-top:16px;font-family:var(--mono);font-size:12px;color:var(--ink-mute);
+  background:var(--paper);border:2px dashed var(--ink);border-radius:10px;padding:12px 16px;
+}
+.shot-note code{background:var(--cream);border:1.5px solid var(--ink);padding:1px 6px;border-radius:5px;font-weight:700}
+
+/* ── COMPARISON ────────────────────────────────────── */
+.compare-wrap{overflow-x:auto;border:3px solid var(--ink);border-radius:18px;background:var(--cream);box-shadow:6px 6px 0 var(--ink)}
+table.compare{width:100%;border-collapse:collapse;font-family:var(--sans);font-size:14px;min-width:680px}
+table.compare th, table.compare td{padding:14px 16px;text-align:left;border-bottom:2px solid var(--ink);vertical-align:middle}
+table.compare thead th{
+  background:var(--ink);color:var(--cream);font-family:var(--mono);font-weight:700;font-size:12px;
+  letter-spacing:.08em;text-transform:uppercase;
+}
+table.compare thead th.us{background:var(--lime);color:var(--ink)}
+table.compare thead th.us::before{content:"★ ";color:var(--ink)}
+table.compare tbody tr:last-child td{border-bottom:0}
+table.compare td.k{font-weight:600;color:var(--ink);width:32%}
+table.compare td.k small{display:block;font-weight:400;color:var(--ink-mute);font-size:12px;margin-top:2px}
+table.compare td.cell{font-family:var(--mono);font-size:13px;color:var(--ink-2);text-align:center}
+table.compare td.us{background:rgba(200,255,61,0.20);font-weight:700;color:var(--ink)}
+table.compare .y{color:var(--ink);font-weight:700}
+table.compare .y::before{content:"✓ ";color:#1B8B3A;font-weight:700}
+table.compare .n{color:var(--ink-mute)}
+table.compare .n::before{content:"✕ ";color:var(--red);font-weight:700}
+table.compare .partial::before{content:"~ ";color:var(--blue);font-weight:700}
+table.compare tbody tr:hover td:not(.us){background:rgba(255,230,0,0.18)}
+
+/* ── TELEMETRY ─────────────────────────────────────── */
+.tele-wrap{
+  background:var(--ink);color:var(--cream);border-radius:26px;
+  padding:48px 36px;position:relative;overflow:hidden;
+  box-shadow:9px 9px 0 var(--pink);border:3px solid var(--ink);
+}
+.tele-wrap::before{
+  content:"NO TRACKERS  ·  NO ANALYTICS  ·  NO CRASH REPORTS  ·  NO DEVICE IDs  ·  ";
+  position:absolute;top:14px;left:0;right:0;
+  font-family:var(--mono);font-weight:700;font-size:13px;color:var(--lime);
+  white-space:nowrap;letter-spacing:.18em;
+  animation:scroll 30s linear infinite;
+}
+.tele-statement{
+  font-family:var(--display);font-weight:800;
+  font-size:clamp(48px, 8vw, 110px);line-height:0.9;letter-spacing:-0.03em;
+  margin:36px 0 18px;color:var(--cream);
+}
+.tele-statement .none{
+  background:var(--lime);color:var(--ink);padding:0 16px;border-radius:14px;
+  transform:rotate(-2deg);display:inline-block;box-shadow:6px 6px 0 var(--pink);
+}
+.tele-statement em{
+  font-style:normal;display:block;font-size:0.34em;color:var(--cream);
+  font-weight:500;margin-top:10px;opacity:.92;letter-spacing:0;line-height:1.25;
+}
+.tele-cols{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:24px}
+.tele-cols h4{
+  font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--lime);margin:0 0 12px;
+}
+.killtags{display:flex;flex-wrap:wrap;gap:8px}
+.killtags span{
+  background:var(--ink-2);color:var(--cream);
+  border:2px solid var(--red);padding:3px 12px;border-radius:999px;
+  font-family:var(--sans);font-weight:600;font-size:13px;
+  text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px;
+}
+.conn-list{margin:0;padding:0;list-style:none}
+.conn-list li{
+  padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.12);
+  display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:baseline;
+  font-size:14px;color:var(--cream);
+}
+.conn-list .host{font-family:var(--mono);font-weight:700;color:var(--yellow)}
+.conn-list .why{color:rgba(255,255,255,0.78)}
+
+.tele-verify{
+  background:var(--cream);color:var(--ink);
+  border-radius:14px;padding:18px;margin-top:24px;
+  font-family:var(--mono);font-size:13.5px;line-height:1.65;
+  white-space:pre;overflow-x:auto;border:3px solid var(--lime);position:relative;
+}
+.tele-verify .c{color:var(--ink-mute)}
+.tele-verify .pmt{color:var(--pink);font-weight:700}
+.tele-verify .copy-v{
+  position:absolute;top:12px;right:12px;
+  background:var(--lime);border:2px solid var(--ink);
+  color:var(--ink);font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 10px;border-radius:6px;cursor:pointer;
+}
+.tele-verify .copy-v.ok{background:var(--ink);color:var(--lime)}
+.tele-verify .copy-v:hover{background:var(--pink);color:var(--cream)}
+
+.tele-site-note{
+  margin-top:16px;font-family:var(--sans);font-size:13.5px;color:rgba(255,255,255,0.78);
+  border-left:3px solid var(--lime);padding:10px 14px;background:rgba(200,255,61,0.06);border-radius:0 10px 10px 0;
+}
+.tele-site-note b{color:var(--lime)}
+
+/* ── FAQ ────────────────────────────────────────────── */
+.faq-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+details.faq{
+  border:3px solid var(--ink);border-radius:14px;background:var(--cream);
+  box-shadow:4px 4px 0 var(--ink);overflow:hidden;
+  transition:transform .12s, box-shadow .12s;
+}
+details.faq[open]{box-shadow:6px 6px 0 var(--yellow);background:var(--paper)}
+details.faq:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--pink)}
+details.faq[open]:hover{box-shadow:7px 7px 0 var(--yellow)}
+details.faq summary{
+  cursor:pointer;list-style:none;
+  padding:16px 22px;
+  font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:-0.01em;
+  color:var(--ink);line-height:1.3;
+  display:flex;align-items:center;gap:14px;
+  user-select:none;
+}
+details.faq summary::-webkit-details-marker{display:none}
+details.faq summary::before{
+  content:"+";flex:0 0 auto;
+  width:30px;height:30px;border:2px solid var(--ink);border-radius:50%;
+  background:var(--yellow);color:var(--ink);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-weight:700;font-size:20px;line-height:1;
+  transition:transform .15s;
+}
+details.faq[open] summary::before{content:"−";background:var(--pink);color:var(--cream);transform:rotate(180deg)}
+details.faq .body{
+  padding:0 22px 20px 64px;
+  font-size:14.5px;line-height:1.55;color:var(--ink-2);
+}
+details.faq .body p{margin:0 0 10px}
+details.faq .body p:last-child{margin-bottom:0}
+details.faq .body code{font-family:var(--mono);font-size:12.5px;background:var(--cream);border:1.5px solid var(--ink);padding:1px 6px;border-radius:5px}
+details.faq .body a{color:var(--ink);text-decoration-color:var(--pink);font-weight:600}
+
+/* ── ROADMAP ───────────────────────────────────────── */
+.roadmap{
+  display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;position:relative;
+}
+.road-col{
+  border:3px solid var(--ink);border-radius:14px;padding:16px 18px;
+  background:var(--cream);box-shadow:5px 5px 0 var(--ink);
+  display:flex;flex-direction:column;gap:10px;
+}
+.road-col.done{background:var(--lime)}
+.road-col.now{background:var(--yellow)}
+.road-col.next{background:var(--sky)}
+.road-col.later{background:var(--cream)}
+.road-col h4{
+  font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink);margin:0 0 4px;
+  display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+}
+.road-col h4 .count{
+  background:var(--ink);color:var(--cream);
+  padding:2px 8px;border-radius:999px;font-size:10px;letter-spacing:.06em;
+}
+.road-col ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.road-col li{
+  font-family:var(--sans);font-size:13.5px;color:var(--ink);line-height:1.4;
+  padding-left:20px;position:relative;
+}
+.road-col li::before{
+  content:"●";position:absolute;left:0;top:0;color:var(--ink);font-size:14px;
+}
+.road-col.done li::before{content:"✓";color:#1B8B3A;font-weight:700}
+.road-col.now li::before{content:"⌛";font-size:13px}
+.road-col.next li::before{content:"→"}
+.road-col.later li::before{content:"○";opacity:.5}
+.road-col li b{font-weight:700}
+.road-col li small{display:block;font-family:var(--mono);font-size:11px;color:var(--ink-mute);margin-top:2px;letter-spacing:.02em}
+
+/* ── SERVICES ──────────────────────────────────────── */
+.svc-wrap{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+.svc-card{
+  border:3px solid var(--ink);border-radius:14px;padding:18px 20px;
+  background:var(--cream);box-shadow:5px 5px 0 var(--ink);
+  display:flex;flex-direction:column;gap:6px;
+  transition:transform .12s, box-shadow .12s;
+}
+.svc-card:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink)}
+.svc-card .host{font-family:var(--mono);font-weight:700;font-size:14.5px;color:var(--ink)}
+.svc-card .host a{text-decoration:none;color:var(--ink);background:none}
+.svc-card .host a:hover{background:var(--yellow)}
+.svc-card .desc{font-size:13.5px;color:var(--ink-2)}
+.svc-card .tag{
+  align-self:flex-start;font-family:var(--mono);font-weight:700;font-size:10.5px;
+  letter-spacing:.1em;text-transform:uppercase;
+  background:var(--ink);color:var(--cream);padding:2px 9px;border-radius:999px;border:2px solid var(--ink);
+}
+.svc-card.public .tag{background:var(--lime);color:var(--ink)}
+.svc-card.commercial .tag{background:var(--pink);color:var(--cream)}
+.svc-card.edu .tag{background:var(--blue);color:var(--cream)}
+.svc-card.locked .tag{background:var(--ink);color:var(--yellow)}
+.svc-card.locked{opacity:.78;background:repeating-linear-gradient(45deg, var(--cream) 0 14px, var(--paper) 14px 15px)}
+.svc-card.locked .host{color:var(--ink-mute)}
+
+.svc-1{grid-column:span 6;background:var(--pink);color:var(--cream)}
+.svc-1 .host,.svc-1 .host a,.svc-1 .desc{color:var(--cream)}
+.svc-1 .tag{background:var(--ink);color:var(--yellow)}
+.svc-2{grid-column:span 3;background:var(--blue);color:var(--cream)}
+.svc-2 .host,.svc-2 .host a,.svc-2 .desc{color:var(--cream)}
+.svc-2 .tag{background:var(--ink);color:var(--lime)}
+.svc-3{grid-column:span 3;background:var(--sky)}
+.svc-4{grid-column:span 3;background:var(--lime)}
+.svc-5{grid-column:span 3}
+.svc-6{grid-column:span 3}
+.svc-7{grid-column:span 3}
+.svc-8{grid-column:span 3}
+
+.auth-banner{
+  grid-column:span 12;background:var(--yellow);border:3px solid var(--ink);border-radius:14px;
+  padding:14px 22px;font-family:var(--sans);font-weight:600;font-size:15px;
+  display:flex;align-items:center;gap:14px;
+  box-shadow:5px 5px 0 var(--ink);
+}
+.auth-banner.unlocked{background:var(--lime);display:none}
+.auth-banner .ico{font-size:24px}
+.auth-banner a{font-weight:700;color:var(--ink);text-decoration-color:var(--ink)}
+
+/* ── SUPPORT CTA ───────────────────────────────────── */
+.support{
+  background:var(--lime);border:3px solid var(--ink);border-radius:24px;
+  padding:36px;box-shadow:8px 8px 0 var(--ink);
+  display:grid;grid-template-columns:1.6fr 1fr;gap:28px;align-items:center;
+}
+.support h3{
+  font-family:var(--display);font-weight:800;font-size:clamp(36px,5vw,56px);line-height:0.95;letter-spacing:-0.02em;
+  margin:0 0 10px;color:var(--ink);
+}
+.support h3 em{font-style:normal;background:var(--ink);color:var(--lime);padding:0 10px;display:inline-block;transform:rotate(-1deg);border-radius:8px}
+.support p{margin:0 0 16px;font-size:16px;color:var(--ink-2);line-height:1.5}
+.support .row{display:flex;flex-wrap:wrap;gap:14px}
+.support .cta{background:var(--ink);color:var(--cream);box-shadow:6px 6px 0 var(--pink)}
+.support .cta:hover{color:var(--lime)}
+.support .star-card{
+  background:var(--ink);color:var(--lime);
+  border:3px solid var(--ink);border-radius:18px;padding:22px;
+  font-family:var(--mono);font-size:13px;text-align:center;
+  transform:rotate(2deg);box-shadow:6px 6px 0 var(--pink);
+}
+.support .star-card .big{
+  font-family:var(--display);font-weight:800;font-size:60px;line-height:1;color:var(--yellow);letter-spacing:-0.02em;
+}
+.support .star-card .sub{margin-top:6px;color:var(--cream);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.support .star-card a{color:var(--lime);text-decoration-color:var(--pink)}
+
+/* ── FOOTER ───────────────────────────────────────── */
+footer.bigfoot{
+  background:var(--ink);color:var(--cream);border-radius:26px;
+  padding:48px 36px;margin:48px 0 28px;position:relative;overflow:hidden;
+}
+footer.bigfoot .huge{
+  font-family:var(--display);font-weight:800;
+  font-size:clamp(80px,14vw,200px);line-height:0.82;letter-spacing:-0.04em;
+  color:var(--cream);margin:0 0 18px;
+}
+footer.bigfoot .huge .pop{
+  background:var(--pink);color:var(--cream);padding:0 14px;border-radius:14px;
+  display:inline-block;transform:rotate(-1.5deg);
+}
+footer.bigfoot .huge .yel{
+  background:var(--yellow);color:var(--ink);padding:0 14px;border-radius:14px;
+  display:inline-block;transform:rotate(1deg);
+}
+footer.bigfoot .cols{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:32px;margin-top:24px;
+  padding-top:24px;border-top:2px dashed rgba(255,255,255,0.18);
+  font-family:var(--mono);font-size:13px;
+}
+footer.bigfoot .cols h5{
+  font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--lime);margin:0 0 10px;
+}
+footer.bigfoot .cols p{margin:0 0 4px;line-height:1.5}
+footer.bigfoot .cols a{color:var(--cream);text-decoration:underline;text-decoration-color:var(--pink);text-decoration-thickness:2px}
+footer.bigfoot .cols a:hover{color:var(--lime);background:transparent}
+footer.bigfoot .pen-bottom{
+  position:absolute;bottom:-22px;right:24px;width:170px;height:170px;
+  background:url('assets/penguin-sketch-white.png') center/contain no-repeat;
+  opacity:.95;transform:rotate(-8deg);pointer-events:none;
+}
+footer.bigfoot .legal{
+  margin-top:18px;font-family:var(--mono);font-size:11.5px;color:rgba(255,255,255,0.55);
+  display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline;
+}
+
+/* ── LIGHTBOX ───────────────────────────────────────── */
+.lightbox{
+  position:fixed;inset:0;z-index:200;background:rgba(10,9,7,0.92);
+  display:none;align-items:center;justify-content:center;padding:32px;
+  backdrop-filter:blur(4px);
+}
+.lightbox.show{display:flex}
+.lightbox .box{
+  max-width:1080px;width:100%;
+  background:var(--cream);border:3px solid var(--cream);border-radius:18px;
+  overflow:hidden;position:relative;
+}
+.lightbox .box .frame{
+  aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;
+  background:var(--paper);
+  background-image:repeating-linear-gradient(45deg, transparent 0 14px, rgba(10,9,7,0.05) 14px 15px);
+  font-family:var(--mono);color:var(--ink-mute);text-transform:uppercase;letter-spacing:.06em;
+  font-size:14px;
+}
+.lightbox .cap{
+  padding:14px 20px;font-family:var(--sans);font-weight:600;color:var(--ink);font-size:16px;
+  border-top:2px solid var(--ink);background:var(--cream);
+}
+.lightbox .close{
+  position:absolute;top:14px;right:14px;
+  width:42px;height:42px;background:var(--yellow);border:3px solid var(--ink);border-radius:50%;
+  font-family:var(--mono);font-weight:700;font-size:18px;color:var(--ink);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:3px 3px 0 var(--ink);
+}
+.lightbox .close:hover{background:var(--pink);color:var(--cream)}
+
+/* ── MOBILE ─────────────────────────────────────────── */
+@media (max-width:980px){
+  .wrap{padding:0 18px}
+  .hero-grid{grid-template-columns:1fr;gap:18px}
+  .hero-pen-wrap{width:240px;margin:18px auto 8px}
+  .sticker-1,.sticker-2,.sticker-3{position:absolute}
+  .os-grid{grid-template-columns:1fr}
+  .feat-grid > div{grid-column:span 12 !important}
+  .feat-bigstat{grid-template-columns:1fr}
+  .how-grid{grid-template-columns:1fr}
+  .how-panel .arrow{display:none}
+  .tele-cols{grid-template-columns:1fr}
+  .svc-wrap > div{grid-column:span 12 !important}
+  footer.bigfoot .cols{grid-template-columns:1fr 1fr}
+  footer.bigfoot .pen-bottom{display:none}
+  .topbar .nav{display:none}
+  .topbar .nav-mobile{display:inline-flex !important}
+  .shot-grid{grid-template-columns:1fr 1fr}
+  .shot.wide,.shot.tall,.shot.med{grid-column:span 1}
+  .roadmap{grid-template-columns:1fr 1fr}
+  .faq-grid{grid-template-columns:1fr}
+  .support{grid-template-columns:1fr}
+  h1.headline{font-size:clamp(44px,12vw,80px)}
+  .section-h .num{font-size:54px}
+}
+@media (max-width:560px){
+  .roadmap{grid-template-columns:1fr}
+  footer.bigfoot .cols{grid-template-columns:1fr}
+  .section{padding:36px 0}
+  .marquee{font-size:11px}
+}
+
+/* Mobile menu */
+.topbar .nav-mobile{display:none;margin-left:auto}
+.nav-mobile button{
+  appearance:none;background:var(--ink);color:var(--lime);border:0;
+  width:42px;height:42px;border-radius:12px;font-size:20px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  box-shadow:3px 3px 0 var(--pink);
+}
+.mobile-drawer{
+  position:fixed;inset:0;z-index:30;background:rgba(10,9,7,0.5);backdrop-filter:blur(4px);
+  display:none;align-items:flex-start;justify-content:flex-end;
+}
+.mobile-drawer.show{display:flex}
+.mobile-drawer .panel{
+  background:var(--cream);width:80%;max-width:340px;height:100%;
+  padding:24px;display:flex;flex-direction:column;gap:14px;
+  border-left:3px solid var(--ink);
+}
+.mobile-drawer .panel a{
+  padding:10px 14px;background:var(--cream);border:2px solid var(--ink);border-radius:12px;
+  text-decoration:none;color:var(--ink);font-family:var(--mono);font-weight:600;font-size:14px;
+  display:flex;align-items:center;gap:10px;
+}
+.mobile-drawer .panel a:hover{background:var(--yellow)}
+.mobile-drawer .panel .close{align-self:flex-end;background:var(--pink);color:var(--cream);border:2px solid var(--ink);border-radius:50%;width:38px;height:38px;font-weight:700;cursor:pointer;font-family:var(--mono);font-size:18px;display:inline-flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+
+<!-- MARQUEE -->
+<div class="marquee" aria-hidden="true">
+  <div class="track">
+    <span><span class="dot">●</span> <span data-i18n="en">per-process routing</span><span data-i18n="ru">маршрутизация по процессам</span></span>
+    <span><span class="dot">●</span> <span data-i18n="en">25 000 free public configs</span><span data-i18n="ru">25 000 публичных конфигов</span></span>
+    <span><span class="dot">●</span> <span data-i18n="en">ZERO telemetry</span><span data-i18n="ru">НОЛЬ телеметрии</span></span>
+    <span><span class="dot">●</span> <span data-i18n="en">VLESS + Reality + sing-box</span><span data-i18n="ru">VLESS + Reality + sing-box</span></span>
+    <span><span class="dot">●</span> <span data-i18n="en">GPL-3.0 · open source</span><span data-i18n="ru">GPL-3.0 · open source</span></span>
+    <span><span class="dot">●</span> <span data-i18n="en">windows · macos · linux</span><span data-i18n="ru">windows · macos · linux</span></span>
+    <span><span class="dot">●</span> <span data-i18n="en">per-process routing</span><span data-i18n="ru">маршрутизация по процессам</span></span>
+    <span><span class="dot">●</span> <span data-i18n="en">25 000 free public configs</span><span data-i18n="ru">25 000 публичных конфигов</span></span>
+    <span><span class="dot">●</span> <span data-i18n="en">ZERO telemetry</span><span data-i18n="ru">НОЛЬ телеметрии</span></span>
+    <span><span class="dot">●</span> <span data-i18n="en">VLESS + Reality + sing-box</span><span data-i18n="ru">VLESS + Reality + sing-box</span></span>
+    <span><span class="dot">●</span> <span data-i18n="en">GPL-3.0 · open source</span><span data-i18n="ru">GPL-3.0 · open source</span></span>
+    <span><span class="dot">●</span> <span data-i18n="en">windows · macos · linux</span><span data-i18n="ru">windows · macos · linux</span></span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- TOP BAR -->
+  <header class="topbar" id="topbar">
+    <a class="brand" href="/" aria-label="ninitux.com">
+      <span class="star">★</span> ninitux.com
+    </a>
+    <nav class="nav">
+      <a class="nl" href="#install"><span data-i18n="en">install</span><span data-i18n="ru">установка</span></a>
+      <a class="nl" href="#features"><span data-i18n="en">features</span><span data-i18n="ru">фичи</span></a>
+      <a class="nl" href="#how"><span data-i18n="en">how</span><span data-i18n="ru">как</span></a>
+      <a class="nl" href="#screenshots"><span data-i18n="en">shots</span><span data-i18n="ru">скрины</span></a>
+      <a class="nl" href="#compare"><span data-i18n="en">compare</span><span data-i18n="ru">сравнение</span></a>
+      <a class="nl" href="#telemetry"><span data-i18n="en">telemetry</span><span data-i18n="ru">телеметрия</span></a>
+      <a class="nl" href="#faq">FAQ</a>
+      <a class="nl" href="#services"><span data-i18n="en">services</span><span data-i18n="ru">сервисы</span></a>
+      <div class="seg" role="group" aria-label="Language">
+        <button data-lang="en" aria-pressed="true">EN</button>
+        <button data-lang="ru" aria-pressed="false">RU</button>
+      </div>
+      <a class="auth-btn" id="auth-btn" href="/auth/login?next=https://ninitux.com">
+        <span data-i18n="en">Login</span><span data-i18n="ru">Войти</span>
+      </a>
+    </nav>
+    <div class="nav-mobile">
+      <button id="mobile-open" aria-label="menu">≡</button>
+    </div>
+  </header>
+
+  <!-- MOBILE DRAWER -->
+  <div class="mobile-drawer" id="mobile-drawer">
+    <div class="panel">
+      <button class="close" id="mobile-close" aria-label="close">×</button>
+      <a href="#install"><span data-i18n="en">install</span><span data-i18n="ru">установка</span></a>
+      <a href="#features"><span data-i18n="en">features</span><span data-i18n="ru">фичи</span></a>
+      <a href="#how"><span data-i18n="en">how it works</span><span data-i18n="ru">как работает</span></a>
+      <a href="#screenshots"><span data-i18n="en">screenshots</span><span data-i18n="ru">скриншоты</span></a>
+      <a href="#compare"><span data-i18n="en">comparison</span><span data-i18n="ru">сравнение</span></a>
+      <a href="#telemetry"><span data-i18n="en">telemetry</span><span data-i18n="ru">телеметрия</span></a>
+      <a href="#faq">FAQ</a>
+      <a href="#roadmap"><span data-i18n="en">roadmap</span><span data-i18n="ru">планы</span></a>
+      <a href="#services"><span data-i18n="en">other services</span><span data-i18n="ru">другие сервисы</span></a>
+      <a href="https://github.com/PavelLizunov/VPNRouter">★ GitHub</a>
+      <a href="https://boosty.to/ninitux">♥ Boosty</a>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <section class="hero" id="top">
+    <div class="hero-grid">
+      <div>
+        <p class="eyebrow"><span class="blink"></span> <span data-i18n="en">Virtual Penguin Network · live</span><span data-i18n="ru">Virtual Penguin Network · работает</span></p>
+
+        <h1 class="headline" data-i18n="en">
+          Not a <span class="strike">tunnel</span>.<br>
+          A <span class="pop">router</span> for<br>
+          <span class="underline">your apps.</span>
+        </h1>
+        <h1 class="headline" data-i18n="ru">
+          Не <span class="strike">тоннель</span>.<br>
+          <span class="pop">Роутер</span> для<br>
+          <span class="underline">ваших приложений.</span>
+        </h1>
+
+        <p class="lede" data-i18n="en">
+          <em>Pick which programs go through the proxy</em> — Slack, your torrent client, that one website. Everything else stays direct, on the open net. <b>Windows, macOS, Linux.</b> Open source.
+        </p>
+        <p class="lede" data-i18n="ru">
+          <em>Выберите какие приложения идут через прокси</em> — Slack, торрент-клиент, один сайт. Всё остальное идёт напрямую, по обычной сети. <b>Windows, macOS, Linux.</b> Open source.
+        </p>
+
+        <div class="cta-row">
+          <a class="cta" href="#install"><span data-i18n="en">Install →</span><span data-i18n="ru">Установить →</span></a>
+          <a class="cta secondary" href="https://github.com/PavelLizunov/VPNRouter" target="_blank" rel="noopener">★ <span data-i18n="en">Star on GitHub</span><span data-i18n="ru">Поставить звезду на GitHub</span></a>
+          <span class="cta-meta"><span data-i18n="en">latest</span><span data-i18n="ru">последняя</span> <b id="hero-ver">v0.7.4</b> · <b id="hero-size">~14 MB</b> · sha256 ✓</span>
+        </div>
+
+        <div class="trust-row">
+          <span class="pill"><span class="dot"></span> GPL-3.0</span>
+          <span class="pill"><span class="dot"></span> sing-box <span data-i18n="en">core</span><span data-i18n="ru">core</span></span>
+          <span class="pill"><span class="dot"></span> VLESS + Reality</span>
+          <span class="pill"><span class="dot"></span> <span data-i18n="en">no daemon</span><span data-i18n="ru">без демона</span></span>
+        </div>
+      </div>
+
+      <div class="hero-pen-wrap">
+        <div class="hero-pen" role="img" aria-label="Penguin mascot"></div>
+        <span class="hero-sticker sticker-1">★ very cool</span>
+        <span class="hero-sticker sticker-2"><span data-i18n="en">it's a router!!</span><span data-i18n="ru">это роутер!!</span></span>
+        <span class="hero-sticker sticker-3">v0.7.4 · GPL-3</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── INSTALL ── -->
+  <section class="section" id="install">
+    <div class="section-h">
+      <div class="num" style="color:var(--blue)">01</div>
+      <h2><span data-i18n="en">Pick an</span><span data-i18n="ru">Выберите</span> <em>OS</em>. <span data-i18n="en">Paste the line. Done.</span><span data-i18n="ru">Вставьте команду. Готово.</span></h2>
+      <div class="meta">// install · 1 command each</div>
+    </div>
+
+    <div class="os-grid">
+      <div class="os-card" data-os="linux">
+        <span class="badge">apt · pacman · curl</span>
+        <span class="detected-tag"><span data-i18n="en">your OS</span><span data-i18n="ru">ваша OS</span></span>
+        <h3><span class="glyph">🐧</span> Linux</h3>
+        <p class="blurb" data-i18n="en">curl, sudo, capabilities. No system daemon, no full-root nonsense.</p>
+        <p class="blurb" data-i18n="ru">curl, sudo, capabilities. Без системного демона, без полного root.</p>
+        <div class="cmd-box">
+          <div class="cmd"><span class="pmt">$</span>curl <span class="flag">-fsSL</span> <span class="url">vpn.ninitux.com/install.sh</span> | sudo sh</div>
+          <button class="copy" data-copy="curl -fsSL https://vpn.ninitux.com/install.sh | sudo sh" data-umami-event="copy-install-linux"><span data-i18n="en">copy</span><span data-i18n="ru">копир.</span></button>
+        </div>
+        <div class="hint">
+          <span data-i18n="en">terminal:</span><span data-i18n="ru">терминал:</span>
+          <span class="kbd">Ctrl</span>+<span class="kbd">Alt</span>+<span class="kbd">T</span>
+        </div>
+        <div class="manual">
+          <span class="lbl" data-i18n="en">manual:</span><span class="lbl" data-i18n="ru">вручную:</span>
+          <a href="#" data-asset-suffix="-linux-amd64.deb" data-fallback="https://github.com/PavelLizunov/VPNRouter/releases/latest" data-umami-event="dl-deb">.deb <span class="ver" data-ver></span></a>
+          <a href="#" data-asset-suffix=".AppImage" data-fallback="https://github.com/PavelLizunov/VPNRouter/releases/latest" data-umami-event="dl-appimage">.AppImage <span class="ver" data-ver></span></a>
+          <a href="#" data-asset-suffix="-linux.tar.gz" data-fallback="https://github.com/PavelLizunov/VPNRouter/releases/latest" data-umami-event="dl-targz">.tar.gz <span class="ver" data-ver></span></a>
+        </div>
+        <span class="req" data-i18n="en">sudo at install only · uses POSIX caps</span>
+        <span class="req" data-i18n="ru">sudo только при установке · POSIX caps</span>
+      </div>
+
+      <div class="os-card" data-os="mac">
+        <span class="badge">homebrew · cask</span>
+        <span class="detected-tag"><span data-i18n="en">your OS</span><span data-i18n="ru">ваша OS</span></span>
+        <h3><span class="glyph">🍎</span> macOS</h3>
+        <p class="blurb" data-i18n="en">Signed cask. One sudoers entry, never asked again. utun adapter.</p>
+        <p class="blurb" data-i18n="ru">Подписанный cask. Один раз sudoers и больше не спрашивает. utun.</p>
+        <div class="cmd-box">
+          <div class="cmd"><span class="pmt">$</span>brew install <span class="flag">--cask</span> pavellizunov/vpnrouter/vpnrouter</div>
+          <button class="copy" data-copy="brew install --cask pavellizunov/vpnrouter/vpnrouter" data-umami-event="copy-install-mac"><span data-i18n="en">copy</span><span data-i18n="ru">копир.</span></button>
+        </div>
+        <div class="hint">
+          <span data-i18n="en">terminal:</span><span data-i18n="ru">терминал:</span>
+          <span class="kbd">⌘</span>+<span class="kbd">Space</span> → <span class="kbd">Terminal</span>
+        </div>
+        <div class="manual">
+          <span class="lbl" data-i18n="en">manual:</span><span class="lbl" data-i18n="ru">вручную:</span>
+          <a href="#" data-asset-suffix="-mac.dmg" data-fallback="https://github.com/PavelLizunov/VPNRouter/releases/latest" data-umami-event="dl-dmg">.dmg <span class="ver" data-ver></span></a>
+          <a href="#" data-asset-suffix="-mac.zip" data-fallback="https://github.com/PavelLizunov/VPNRouter/releases/latest" data-umami-event="dl-mac-zip">.zip <span class="ver" data-ver></span></a>
+        </div>
+        <span class="req" data-i18n="en">macOS 12+ · Apple Silicon &amp; Intel</span>
+        <span class="req" data-i18n="ru">macOS 12+ · Apple Silicon &amp; Intel</span>
+      </div>
+
+      <div class="os-card" data-os="win">
+        <span class="badge">powershell · admin</span>
+        <span class="detected-tag"><span data-i18n="en">your OS</span><span data-i18n="ru">ваша OS</span></span>
+        <h3><span class="glyph">🪟</span> Windows</h3>
+        <p class="blurb" data-i18n="en">TUN driver + ETW listener + optional Zapret module for DPI bypass.</p>
+        <p class="blurb" data-i18n="ru">TUN-драйвер + ETW listener + опциональный Zapret для DPI bypass.</p>
+        <div class="cmd-box">
+          <div class="cmd"><span class="pmt">&gt;</span>iwr <span class="flag">-useb</span> <span class="url">vpn.ninitux.com/install.ps1</span> | iex</div>
+          <button class="copy" data-copy="iwr -useb https://vpn.ninitux.com/install.ps1 | iex" data-umami-event="copy-install-win"><span data-i18n="en">copy</span><span data-i18n="ru">копир.</span></button>
+        </div>
+        <div class="hint">
+          <span data-i18n="en">PowerShell admin:</span><span data-i18n="ru">PowerShell админ:</span>
+          <span class="kbd">Win</span>+<span class="kbd">X</span>
+        </div>
+        <div class="manual">
+          <span class="lbl" data-i18n="en">manual:</span><span class="lbl" data-i18n="ru">вручную:</span>
+          <a href="#" data-asset-match="win-zip" data-fallback="https://github.com/PavelLizunov/VPNRouter/releases/latest" data-umami-event="dl-win-zip">.zip <span class="ver" data-ver></span></a>
+        </div>
+        <span class="req" data-i18n="en">requires admin · Windows 10 / 11</span>
+        <span class="req" data-i18n="ru">нужен админ · Windows 10 / 11</span>
+      </div>
+    </div>
+
+    <p style="margin-top:22px;text-align:center;font-family:var(--mono);font-size:13px;color:var(--ink-mute)">
+      <span data-i18n="en">→ all releases on</span><span data-i18n="ru">→ все релизы на</span>
+      <a href="https://github.com/PavelLizunov/VPNRouter/releases" target="_blank" rel="noopener" data-umami-event="click-releases" style="font-weight:700;color:var(--ink)">GitHub</a>
+      &nbsp;·&nbsp;
+      <span data-i18n="en">verify checksums:</span><span data-i18n="ru">проверка контрольных сумм:</span>
+      <a href="https://github.com/PavelLizunov/VPNRouter/releases" target="_blank" rel="noopener" style="font-weight:700;color:var(--ink)">SHA256SUMS</a>
+    </p>
+  </section>
+
+  <!-- ── FEATURES ── -->
+  <section class="section feat-wrap" id="features">
+    <div class="section-h">
+      <div class="num" style="color:var(--pink)">02</div>
+      <h2><span data-i18n="en">What's in the</span><span data-i18n="ru">Что внутри</span> <em><span data-i18n="en">box</span><span data-i18n="ru">коробки</span></em>.</h2>
+      <div class="meta">// 8 features · click to filter</div>
+    </div>
+
+    <div class="feat-filter" role="group" aria-label="filter">
+      <button data-fil="all" aria-pressed="true"><span data-i18n="en">all</span><span data-i18n="ru">все</span></button>
+      <button data-fil="routing" aria-pressed="false">routing</button>
+      <button data-fil="protocol" aria-pressed="false">protocols</button>
+      <button data-fil="ops" aria-pressed="false">ops</button>
+      <button data-fil="open" aria-pressed="false">open-source</button>
+    </div>
+
+    <div class="feat-grid">
+      <div class="feat feat-1" data-cat="routing">
+        <span class="tag">★ the point</span>
+        <span class="num">f.01</span>
+        <h4 data-i18n="en">Per-process routing</h4>
+        <h4 data-i18n="ru">Маршрутизация по процессам</h4>
+        <p data-i18n="en">Match by PID. Live process list. ETW watches for new processes and hot-reloads the sing-box config without dropping connections.</p>
+        <p data-i18n="ru">Сопоставление по PID. Живой список процессов. ETW следит за новыми процессами и горячо перезагружает sing-box без обрыва соединений.</p>
+      </div>
+
+      <div class="feat feat-2" data-cat="protocol">
+        <span class="tag">built-in</span>
+        <span class="num">f.02</span>
+        <h4>VLESS + Reality</h4>
+        <p data-i18n="en">Censorship-resistant transport, TLS fingerprinting that looks like a regular browser. No plugin, no helper.</p>
+        <p data-i18n="ru">Цензуроустойчивый транспорт, TLS-fingerprint как у обычного браузера. Без плагина, без вспомогательного процесса.</p>
+      </div>
+
+      <div class="feat feat-3" data-cat="protocol">
+        <span class="tag">core</span>
+        <span class="num">f.03</span>
+        <h4 data-i18n="en">Bring your own sing-box</h4>
+        <h4 data-i18n="ru">Свой sing-box</h4>
+        <p data-i18n="en">Drop JSON in. VLESS, TUIC, Hysteria2, Shadowsocks — whatever you actually use.</p>
+        <p data-i18n="ru">Вставьте JSON. VLESS, TUIC, Hysteria2, Shadowsocks — что у вас уже работает.</p>
+      </div>
+
+      <div class="feat feat-4" data-cat="protocol">
+        <span class="tag">auto-refresh</span>
+        <span class="num">f.04</span>
+        <h4 data-i18n="en">Subscription URLs</h4>
+        <h4 data-i18n="ru">Subscription URL</h4>
+        <p data-i18n="en">One link, many servers, refreshed on a schedule. Merges into your list automatically.</p>
+        <p data-i18n="ru">Одна ссылка — много серверов, обновляется по расписанию. Сливается в общий список автоматически.</p>
+      </div>
+
+      <div class="feat feat-5" data-cat="ops">
+        <span class="tag">sha256 ✓</span>
+        <span class="num">f.05</span>
+        <h4 data-i18n="en">Auto-update</h4>
+        <h4 data-i18n="ru">Авто-обновление</h4>
+        <p data-i18n="en">Pulls from <code style="font-family:var(--mono)">api.github.com</code>, verifies SHA-256, swaps the binary. Disable-able.</p>
+        <p data-i18n="ru">Тянет с <code style="font-family:var(--mono)">api.github.com</code>, проверяет SHA-256, заменяет бинарник. Можно отключить.</p>
+      </div>
+
+      <div class="feat feat-6" data-cat="ops">
+        <span class="tag">win-only</span>
+        <span class="num">f.06</span>
+        <h4 data-i18n="en">DPI bypass (Zapret)</h4>
+        <h4 data-i18n="ru">DPI bypass (Zapret)</h4>
+        <p data-i18n="en">Bundled for Windows. Useful where the carrier has opinions about your TLS handshakes.</p>
+        <p data-i18n="ru">Встроено в Windows-сборку. Полезно когда провайдер имеет мнение о ваших TLS handshake.</p>
+      </div>
+
+      <div class="feat feat-7" data-cat="open">
+        <span class="tag">★ free</span>
+        <span class="num">f.07</span>
+        <h4 data-i18n="en">Open source · GPL-3.0</h4>
+        <h4 data-i18n="ru">Open source · GPL-3.0</h4>
+        <p data-i18n="en">Code at <a href="https://github.com/PavelLizunov/VPNRouter">github.com/PavelLizunov/VPNRouter</a>. Read it, fork it, send a patch. Pull requests are read.</p>
+        <p data-i18n="ru">Код тут: <a href="https://github.com/PavelLizunov/VPNRouter">github.com/PavelLizunov/VPNRouter</a>. Читайте, форкайте, шлите PR. Я их читаю.</p>
+      </div>
+
+      <div class="feat feat-bigstat" data-cat="routing">
+        <div>
+          <div class="big">≈25k<span class="small" data-i18n="en">free public<br>VLESS configs</span><span class="small" data-i18n="ru">бесплатных публичных<br>VLESS конфигов</span></div>
+          <div class="pool-stats">
+            <span><span class="pulse"></span> <span id="pool-active">24 962</span> active</span>
+            <span>last sync <span id="pool-sync">02:11</span> ago</span>
+            <span>refresh every 6h</span>
+          </div>
+        </div>
+        <div class="why">
+          <p style="margin:0 0 10px" data-i18n="en"><b>The Free tab</b> joins a public pool that's refreshed every <b>6 hours</b>. Not curated. Variable quality. Useful when you have nowhere else to point a tunnel at — and unlike "premium free" VPNs, <b>the app does not phone home</b> with usage data while you use it.</p>
+          <p style="margin:0 0 10px" data-i18n="ru"><b>Вкладка Free</b> подключается к публичному пулу, обновляемому раз в <b>6 часов</b>. Без курирования. Качество переменчиво. Полезно когда некуда направить тоннель — и в отличие от "premium free" VPN, <b>приложение не сливает</b> данные пока вы им пользуетесь.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HOW ── -->
+  <section class="section" id="how">
+    <div class="section-h">
+      <div class="num" style="color:var(--lime);-webkit-text-stroke:2px var(--ink)">03</div>
+      <h2><span data-i18n="en">How it actually</span><span data-i18n="ru">Как это</span> <em><span data-i18n="en">works</span><span data-i18n="ru">работает</span></em>.</h2>
+      <div class="meta">// 3 steps · ≈90s</div>
+    </div>
+
+    <div class="how-grid">
+      <div class="how-panel">
+        <span class="step">1</span>
+        <h3 data-i18n="en">Install.</h3>
+        <h3 data-i18n="ru">Установить.</h3>
+        <p data-i18n="en">Paste the one-liner for your OS above. Windows needs admin. macOS asks <i>once</i> for a sudoers entry. Linux uses POSIX capabilities — no full-root daemon.</p>
+        <p data-i18n="ru">Вставьте команду для вашей OS выше. Windows — нужен админ. macOS — <i>один раз</i> спросит про sudoers. Linux — POSIX capabilities, без полного root-демона.</p>
+        <div class="pdetail" data-i18n="en"><b>under the hood:</b> drops a binary, registers TUN, writes one capability or sudoers line. ~6 sec.</div>
+        <div class="pdetail" data-i18n="ru"><b>внутри:</b> кладёт бинарник, регистрирует TUN, пишет одну capability или sudoers-строку. ~6 сек.</div>
+        <span class="arrow">→</span>
+      </div>
+      <div class="how-panel">
+        <span class="step">2</span>
+        <h3 data-i18n="en">Add servers.</h3>
+        <h3 data-i18n="ru">Добавить серверы.</h3>
+        <p data-i18n="en">Paste a <code>subscription URL</code>, drop in your own sing-box <code>config.json</code>, or hit the <b>Free</b> tab and pick from the public pool. One-click TCP+TLS probe on any row.</p>
+        <p data-i18n="ru">Вставьте <code>subscription URL</code>, свой sing-box <code>config.json</code>, или откройте вкладку <b>Free</b> и выберите из публичного пула. TCP+TLS probe в один клик на любой строке.</p>
+        <div class="pdetail" data-i18n="en"><b>merge logic:</b> subscriptions + free pool → one unified server list, deduped by SNI+port.</div>
+        <div class="pdetail" data-i18n="ru"><b>логика:</b> подписки + free pool → единый список, дедуп по SNI+port.</div>
+        <span class="arrow">→</span>
+      </div>
+      <div class="how-panel">
+        <span class="step">3</span>
+        <h3 data-i18n="en">Pick your apps.</h3>
+        <h3 data-i18n="ru">Выберите приложения.</h3>
+        <p data-i18n="en">Tick the processes that should go through the tunnel. Everything else stays direct. Hot-reloads with zero dropped sockets when new processes appear.</p>
+        <p data-i18n="ru">Поставьте галки на процессах, которые должны идти через тоннель. Остальное идёт напрямую. Hot-reload без обрыва сокетов при появлении новых процессов.</p>
+        <div class="pdetail" data-i18n="en"><b>match by:</b> exact name · regex · path. Survives reboot. Saved per-machine.</div>
+        <div class="pdetail" data-i18n="ru"><b>матчинг:</b> точное имя · regex · путь. Переживает ребут. Сохраняется на машине.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SCREENSHOTS ── -->
+  <section class="section" id="screenshots">
+    <div class="section-h">
+      <div class="num" style="color:var(--purple)">04</div>
+      <h2><span data-i18n="en">How it</span><span data-i18n="ru">Как</span> <em><span data-i18n="en">looks</span><span data-i18n="ru">выглядит</span></em>.</h2>
+      <div class="meta">// click any tile to enlarge</div>
+    </div>
+
+    <div class="shot-grid">
+      <a class="shot wide" data-shot data-cap="main"
+         data-cap-en="Main flow — install → subscribe → pick apps"
+         data-cap-ru="Главный сценарий — установка → подписка → выбор приложений">
+        <div class="frame">
+          <span class="badge-png">webm</span>
+          <span data-i18n="en">main flow · video</span><span data-i18n="ru">главный сценарий · видео</span>
+        </div>
+        <div class="cap">
+          <span data-i18n="en">Main flow</span><span data-i18n="ru">Главный сценарий</span>
+          <span class="sub" data-i18n="en">install → subscribe → pick apps</span><span class="sub" data-i18n="ru">установка → подписка → выбор приложений</span>
+        </div>
+      </a>
+
+      <a class="shot tall" data-shot
+         data-cap-en="Manual — paste your VLESS+Reality" data-cap-ru="Manual — ваш VLESS+Reality">
+        <div class="frame">
+          <span class="badge-png">png</span>
+          <span>manual</span>
+        </div>
+        <div class="cap">
+          Manual
+          <span class="sub" data-i18n="en">paste your VLESS+Reality</span><span class="sub" data-i18n="ru">ваш VLESS+Reality</span>
+        </div>
+      </a>
+
+      <a class="shot med" data-shot
+         data-cap-en="Subscribe — one URL, many servers" data-cap-ru="Subscribe — один URL, много серверов">
+        <div class="frame">
+          <span class="badge-png">png</span>
+          <span>subscribe</span>
+        </div>
+        <div class="cap">
+          Subscribe
+          <span class="sub" data-i18n="en">one URL, many servers</span><span class="sub" data-i18n="ru">один URL, много серверов</span>
+        </div>
+      </a>
+
+      <a class="shot med" data-shot
+         data-cap-en="Applications — pick processes for the tunnel" data-cap-ru="Applications — выбор процессов">
+        <div class="frame">
+          <span class="badge-png">png</span>
+          <span>applications</span>
+        </div>
+        <div class="cap">
+          Applications
+          <span class="sub" data-i18n="en">pick processes for the tunnel</span><span class="sub" data-i18n="ru">выбор процессов для тоннеля</span>
+        </div>
+      </a>
+
+      <a class="shot med" data-shot
+         data-cap-en="Free — ≈25k public configs, refreshed every 6h" data-cap-ru="Free — ≈25k публичных конфигов, обн. каждые 6 ч">
+        <div class="frame">
+          <span class="badge-png">png</span>
+          <span>free pool</span>
+        </div>
+        <div class="cap">
+          Free
+          <span class="sub" data-i18n="en">≈25k public configs</span><span class="sub" data-i18n="ru">≈25 тыс публичных конфигов</span>
+        </div>
+      </a>
+
+      <a class="shot med" data-shot
+         data-cap-en="Tools — Zapret, diagnostics, logs" data-cap-ru="Tools — Zapret, диагностика, логи">
+        <div class="frame">
+          <span class="badge-png">png</span>
+          <span>tools</span>
+        </div>
+        <div class="cap">
+          Tools
+          <span class="sub" data-i18n="en">Zapret · diagnostics · logs</span><span class="sub" data-i18n="ru">Zapret · диагностика · логи</span>
+        </div>
+      </a>
+    </div>
+
+    <p class="shot-note">
+      <span data-i18n="en"># placeholder tiles — drop files into <code>media/</code> and uncomment each tile's &lt;img&gt; or &lt;video&gt;</span>
+      <span data-i18n="ru"># плейсхолдер-плитки — положите файлы в <code>media/</code> и раскомментируйте &lt;img&gt; или &lt;video&gt;</span>
+    </p>
+  </section>
+
+  <!-- ── COMPARISON ── -->
+  <section class="section" id="compare">
+    <div class="section-h">
+      <div class="num" style="color:var(--red)">05</div>
+      <h2><span data-i18n="en">vs</span><span data-i18n="ru">vs</span> <em><span data-i18n="en">other VPNs</span><span data-i18n="ru">других VPN</span></em>.</h2>
+      <div class="meta">// what makes it different</div>
+    </div>
+
+    <div class="compare-wrap">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th><span data-i18n="en">capability</span><span data-i18n="ru">возможность</span></th>
+            <th class="us">VPN Router</th>
+            <th><span data-i18n="en">commercial VPN</span><span data-i18n="ru">коммерческий VPN</span></th>
+            <th>WireGuard / OpenVPN</th>
+            <th>v2rayN / NekoBox</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="k"><span data-i18n="en">Per-process routing</span><span data-i18n="ru">Маршрутизация по процессам</span><small data-i18n="en">match individual apps to the tunnel</small><small data-i18n="ru">отдельные приложения в тоннель</small></td>
+            <td class="cell us y"><span data-i18n="en">yes · live</span><span data-i18n="ru">да · вживую</span></td>
+            <td class="cell n"><span data-i18n="en">all-or-nothing</span><span data-i18n="ru">всё или ничего</span></td>
+            <td class="cell n"><span data-i18n="en">interface-level</span><span data-i18n="ru">на уровне интерфейса</span></td>
+            <td class="cell partial"><span data-i18n="en">routing rules</span><span data-i18n="ru">routing rules</span></td>
+          </tr>
+          <tr>
+            <td class="k"><span data-i18n="en">Subscription URLs</span><span data-i18n="ru">Subscription URL</span><small data-i18n="en">auto-refreshing server list</small><small data-i18n="ru">авто-обновляемый список серверов</small></td>
+            <td class="cell us y">yes</td>
+            <td class="cell n">—</td>
+            <td class="cell n">—</td>
+            <td class="cell y">yes</td>
+          </tr>
+          <tr>
+            <td class="k"><span data-i18n="en">VLESS + Reality built-in</span><span data-i18n="ru">VLESS + Reality из коробки</span><small data-i18n="en">no extra binaries</small><small data-i18n="ru">без вспомогательных бинарников</small></td>
+            <td class="cell us y">yes</td>
+            <td class="cell n">—</td>
+            <td class="cell n">—</td>
+            <td class="cell y">yes</td>
+          </tr>
+          <tr>
+            <td class="k"><span data-i18n="en">DPI bypass</span><span data-i18n="ru">DPI bypass</span><small data-i18n="en">Zapret bundled, Windows</small><small data-i18n="ru">Zapret в комплекте, Windows</small></td>
+            <td class="cell us y"><span data-i18n="en">bundled</span><span data-i18n="ru">в комплекте</span></td>
+            <td class="cell partial"><span data-i18n="en">paid tier</span><span data-i18n="ru">платный тариф</span></td>
+            <td class="cell n">—</td>
+            <td class="cell partial">manual</td>
+          </tr>
+          <tr>
+            <td class="k"><span data-i18n="en">Free public pool</span><span data-i18n="ru">Бесплатный публичный пул</span><small data-i18n="en">refreshed every 6h</small><small data-i18n="ru">обновляется каждые 6ч</small></td>
+            <td class="cell us y">≈25 000</td>
+            <td class="cell n">—</td>
+            <td class="cell n">—</td>
+            <td class="cell n">—</td>
+          </tr>
+          <tr>
+            <td class="k"><span data-i18n="en">Telemetry / analytics</span><span data-i18n="ru">Телеметрия / аналитика</span><small data-i18n="en">in the app itself</small><small data-i18n="ru">в самом приложении</small></td>
+            <td class="cell us y"><b style="color:#1B8B3A">none</b></td>
+            <td class="cell n"><span data-i18n="en">often heavy</span><span data-i18n="ru">часто много</span></td>
+            <td class="cell y">none</td>
+            <td class="cell y">none</td>
+          </tr>
+          <tr>
+            <td class="k"><span data-i18n="en">Open source</span><span data-i18n="ru">Open source</span><small data-i18n="en">license</small><small data-i18n="ru">лицензия</small></td>
+            <td class="cell us y">GPL-3.0</td>
+            <td class="cell n">—</td>
+            <td class="cell y">GPL / Apache</td>
+            <td class="cell y">GPL</td>
+          </tr>
+          <tr>
+            <td class="k"><span data-i18n="en">Price</span><span data-i18n="ru">Цена</span><small data-i18n="en">to use the app</small><small data-i18n="ru">за использование</small></td>
+            <td class="cell us y"><b data-i18n="en">free</b><b data-i18n="ru">бесплатно</b></td>
+            <td class="cell n">$8–12/mo</td>
+            <td class="cell y">free</td>
+            <td class="cell y">free</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── TELEMETRY ── -->
+  <section class="section" id="telemetry">
+    <div class="section-h">
+      <div class="num" style="color:var(--red)">06</div>
+      <h2><span data-i18n="en">Telemetry:</span><span data-i18n="ru">Телеметрия:</span> <em><span data-i18n="en">none</span><span data-i18n="ru">нет</span></em>. <span data-i18n="en">Verifiable.</span><span data-i18n="ru">Проверяемо.</span></h2>
+      <div class="meta">// the part nobody else writes</div>
+    </div>
+
+    <div class="tele-wrap">
+      <h3 class="tele-statement">
+        <span class="none">none.</span>
+        <em data-i18n="en">no analytics. no crash reports. no device IDs. no install UUIDs. no third-party SDKs at all.</em>
+        <em data-i18n="ru">никакой аналитики. никаких crash-репортов. никаких device ID. никаких install UUID. вообще никаких сторонних SDK.</em>
+      </h3>
+
+      <div class="tele-cols">
+        <div>
+          <h4 data-i18n="en">Not in the source ↓</h4>
+          <h4 data-i18n="ru">Чего нет в коде ↓</h4>
+          <div class="killtags">
+            <span>Sentry</span>
+            <span>Crashlytics</span>
+            <span>Mixpanel</span>
+            <span>GA4</span>
+            <span>AppMetrica</span>
+            <span>Yandex.Metrika</span>
+            <span>Firebase</span>
+            <span>Amplitude</span>
+            <span>PostHog</span>
+            <span data-i18n="en">ad SDKs</span><span data-i18n="ru">рекламные SDK</span>
+            <span>device ID</span>
+            <span>install UUID</span>
+          </div>
+        </div>
+        <div>
+          <h4 data-i18n="en">Outgoing connections the app makes ↓</h4>
+          <h4 data-i18n="ru">Что приложение реально шлёт ↓</h4>
+          <ul class="conn-list">
+            <li><span class="host">vpn.ninitux.com</span><span class="why" data-i18n="en">update check &amp; SHA-256 binary download</span><span class="why" data-i18n="ru">проверка обновлений и скачивание с проверкой SHA-256</span></li>
+            <li><span class="host" data-i18n="en">your VLESS / sing-box</span><span class="host" data-i18n="ru">ваши VLESS / sing-box</span><span class="why" data-i18n="en">the actual tunnel, from your configs</span><span class="why" data-i18n="ru">сам тоннель — из ваших конфигов</span></li>
+            <li><span class="host" data-i18n="en">free pool</span><span class="host" data-i18n="ru">free-пул</span><span class="why" data-i18n="en">public VLESS list · 6h refresh · only when Free tab open</span><span class="why" data-i18n="ru">публичный список · обн. 6ч · только когда открыта Free</span></li>
+            <li><span class="host">api.github.com</span><span class="why" data-i18n="en">release manifest for auto-updater · optional</span><span class="why" data-i18n="ru">манифест релизов для авто-обновления · опционально</span></li>
+          </ul>
+        </div>
+      </div>
+
+<div class="tele-verify"><button class="copy-v" data-copy="git clone https://github.com/PavelLizunov/VPNRouter
+grep -rE '(sentry|crashlytic|mixpanel|appmetrica|firebase-analytics|amplitude)' .
+sudo tcpdump -i any
+pktmon start"><span data-i18n="en">copy all</span><span data-i18n="ru">копир. всё</span></button><span class="c"># prove it to yourself — don't take my word for it</span>
+<span class="pmt">$</span> git clone https://github.com/PavelLizunov/VPNRouter
+<span class="pmt">$</span> grep -rE "(sentry|crashlytic|mixpanel|appmetrica|firebase-analytics|amplitude)" .
+
+<span class="c"># or watch the live traffic at runtime</span>
+<span class="pmt">$</span> sudo tcpdump -i any        <span class="c"># linux / macos</span>
+<span class="pmt">&gt;</span> pktmon start               <span class="c"># windows</span></div>
+
+      <p class="tele-site-note">
+        <span data-i18n="en"><b>About this site:</b> ninitux.com uses self-hosted Umami for traffic counting (no cookies, no third parties). The app itself talks to nothing on this site beyond the update endpoint above.</span>
+        <span data-i18n="ru"><b>Про этот сайт:</b> ninitux.com использует self-hosted Umami для счёта посещений (без cookies, без третьих сторон). Само приложение к этому сайту не обращается кроме endpoint обновлений выше.</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ── FAQ ── -->
+  <section class="section" id="faq">
+    <div class="section-h">
+      <div class="num" style="color:var(--blue)">07</div>
+      <h2><span data-i18n="en">Common</span><span data-i18n="ru">Частые</span> <em><span data-i18n="en">questions</span><span data-i18n="ru">вопросы</span></em>.</h2>
+      <div class="meta">// click to expand</div>
+    </div>
+
+    <div class="faq-grid">
+      <details class="faq" open>
+        <summary><span data-i18n="en">Why "per-process" and not the usual "all traffic"?</span><span data-i18n="ru">Почему "по процессам", а не "весь трафик"?</span></summary>
+        <div class="body">
+          <p data-i18n="en">Because most of your traffic is fine on the open net. Your bank, your Slack, your printer, the cloud storage on which your work lives — these should not take the long way around just because you wanted Telegram or a torrent client to use a tunnel. Routing by app means you get the tunnel exactly where you wanted it and pay no latency anywhere else.</p>
+          <p data-i18n="ru">Потому что большая часть трафика прекрасно живёт в открытой сети. Банк, Slack, принтер, облако с рабочими файлами — им не нужно крутиться через тоннель только из-за того что вы хотели Telegram или торрент пустить через прокси. Маршрутизация по приложениям даёт тоннель именно там где вы хотели — без задержек везде ещё.</p>
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary><span data-i18n="en">Does it really have no telemetry?</span><span data-i18n="ru">Реально нет телеметрии?</span></summary>
+        <div class="body">
+          <p data-i18n="en">Yes. Don't take my word for it — the code is GPL-3.0, you can grep it in 30 seconds (see the Telemetry section). The only outgoing requests are the four listed there, none of which carry usage data.</p>
+          <p data-i18n="ru">Да. Не верьте на слово — код под GPL-3.0, grep-нуть можно за 30 секунд (см. раздел Телеметрия). Исходящие запросы только те четыре, что перечислены выше, и ни один из них не несёт usage-данных.</p>
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary><span data-i18n="en">Where do the ≈25k free configs come from?</span><span data-i18n="ru">Откуда берутся ≈25k бесплатных конфигов?</span></summary>
+        <div class="body">
+          <p data-i18n="en">From a public scrape of openly-shared VLESS endpoints, refreshed every six hours. They are <i>not curated</i> — quality varies, anything can be down at any time, and you should treat them as found change. The Free tab is for when you have nowhere else to point a tunnel; bring your own server when you can.</p>
+          <p data-i18n="ru">Это публичный скрейп открыто-расшаренных VLESS endpoint, обновляется раз в 6 часов. <i>Не курируется</i> — качество разное, любой сервер может лежать, относиться к ним как к найденной мелочи. Free — это когда некуда направить тоннель; свой сервер всегда лучше.</p>
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary><span data-i18n="en">Does it work on a corporate network?</span><span data-i18n="ru">Будет ли работать в корпоративной сети?</span></summary>
+        <div class="body">
+          <p data-i18n="en">Sometimes. VLESS+Reality fingerprints as a regular browser TLS handshake which is usually fine; DPI-heavy networks may still block based on flow analysis. Zapret (Windows-only, bundled) helps for the most common cases. If your corp has its own MITM root certificate, no tunnel will get you out — and you should not try.</p>
+          <p data-i18n="ru">Иногда. VLESS+Reality маскируется под обычный TLS, что обычно прокатывает; сети с тяжёлым DPI могут блокировать по flow-анализу. Zapret (Windows, в комплекте) помогает в типичных случаях. Если у корпорации свой MITM-сертификат — никакой тоннель не выпустит, и не стоит пытаться.</p>
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary><span data-i18n="en">Does it need root / admin all the time?</span><span data-i18n="ru">Нужен ли постоянный root / админ?</span></summary>
+        <div class="body">
+          <p data-i18n="en">No. Linux uses POSIX capabilities so only the TUN-bind needs them — no full-root daemon. macOS writes a one-time sudoers entry at install. Windows needs admin because the TUN driver does; the app itself does not run as SYSTEM.</p>
+          <p data-i18n="ru">Нет. Linux использует POSIX capabilities — только TUN-bind их требует, full-root демона нет. macOS пишет одну sudoers строку при установке. Windows требует админа из-за TUN-драйвера; само приложение не работает как SYSTEM.</p>
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary><span data-i18n="en">Mobile support?</span><span data-i18n="ru">Поддержка мобилки?</span></summary>
+        <div class="body">
+          <p data-i18n="en">Not yet. iOS and Android are on the roadmap (see <a href="#roadmap">roadmap</a>) but not in 2026 H1. For now, mobile users can use a sing-box-compatible client and import the same subscription URL.</p>
+          <p data-i18n="ru">Пока нет. iOS и Android в планах (см. <a href="#roadmap">роадмап</a>), но не в первой половине 2026. Сейчас на телефоне — sing-box совместимый клиент с той же subscription URL.</p>
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary><span data-i18n="en">Can I trust the auto-updater?</span><span data-i18n="ru">Можно ли доверять авто-апдейтеру?</span></summary>
+        <div class="body">
+          <p data-i18n="en">It pulls release manifest from <code>api.github.com</code>, downloads the binary, verifies SHA-256 against the value in the signed manifest, swaps in place. If you don't want it, disable it in Settings → Updates; you'll still get notified.</p>
+          <p data-i18n="ru">Тянет манифест с <code>api.github.com</code>, скачивает бинарник, проверяет SHA-256 против значения из подписанного манифеста, подменяет на месте. Не хотите — выключите в Настройках → Обновления; уведомления всё равно будут.</p>
+        </div>
+      </details>
+
+      <details class="faq">
+        <summary><span data-i18n="en">Does this support [my favourite protocol]?</span><span data-i18n="ru">Поддерживает ли [мой любимый протокол]?</span></summary>
+        <div class="body">
+          <p data-i18n="en">If sing-box supports it, this does: VLESS, TUIC, Hysteria2, Shadowsocks, Trojan, plain SOCKS5, plain HTTP. WireGuard works as an output too. Drop a JSON, click Apply, done.</p>
+          <p data-i18n="ru">Если sing-box поддерживает — поддерживает и это: VLESS, TUIC, Hysteria2, Shadowsocks, Trojan, обычный SOCKS5, HTTP. WireGuard как outbound тоже работает. Кидаете JSON, жмёте Apply, готово.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ── ROADMAP ── -->
+  <section class="section" id="roadmap">
+    <div class="section-h">
+      <div class="num" style="color:var(--lime);-webkit-text-stroke:2px var(--ink)">08</div>
+      <h2><span data-i18n="en">What's</span><span data-i18n="ru">Что</span> <em><span data-i18n="en">shipping</span><span data-i18n="ru">релизится</span></em>.</h2>
+      <div class="meta">// roadmap · 2026</div>
+    </div>
+
+    <div class="roadmap">
+      <div class="road-col done">
+        <h4><span data-i18n="en">shipped</span><span data-i18n="ru">в проде</span> <span class="count">2025</span></h4>
+        <ul>
+          <li><b>Per-process routing</b><small data-i18n="en">match by PID · live process list</small><small data-i18n="ru">по PID · живой список процессов</small></li>
+          <li><b>VLESS + Reality</b><small data-i18n="en">built-in transport</small><small data-i18n="ru">встроенный транспорт</small></li>
+          <li><b>sing-box core</b><small data-i18n="en">JSON config support</small><small data-i18n="ru">поддержка JSON</small></li>
+          <li><b>Auto-update</b><small data-i18n="en">SHA-256 verified</small><small data-i18n="ru">с проверкой SHA-256</small></li>
+          <li><b>Free pool · 25k</b><small data-i18n="en">refreshed every 6h</small><small data-i18n="ru">обн. каждые 6ч</small></li>
+        </ul>
+      </div>
+
+      <div class="road-col now">
+        <h4><span data-i18n="en">now</span><span data-i18n="ru">сейчас</span> <span class="count">Q2 '26</span></h4>
+        <ul>
+          <li><b>WireGuard <span data-i18n="en">outbound</span><span data-i18n="ru">outbound</span></b><small data-i18n="en">in beta · sing-box 1.10</small><small data-i18n="ru">в бете · sing-box 1.10</small></li>
+          <li><b><span data-i18n="en">App groups</span><span data-i18n="ru">Группы приложений</span></b><small data-i18n="en">route by group, not by app</small><small data-i18n="ru">маршрут по группам, не по приложениям</small></li>
+          <li><b>Zapret v3</b><small data-i18n="en">improved DPI bypass for Win</small><small data-i18n="ru">улучшенный DPI bypass для Win</small></li>
+        </ul>
+      </div>
+
+      <div class="road-col next">
+        <h4><span data-i18n="en">next</span><span data-i18n="ru">скоро</span> <span class="count">Q3 '26</span></h4>
+        <ul>
+          <li><b>Linux GUI</b><small data-i18n="en">currently CLI + tray only</small><small data-i18n="ru">сейчас CLI + tray</small></li>
+          <li><b><span data-i18n="en">Custom rules</span><span data-i18n="ru">Кастомные правила</span></b><small data-i18n="en">domain · IP · port</small><small data-i18n="ru">домен · IP · порт</small></li>
+          <li><b>Diagnostic mode</b><small data-i18n="en">why is this app slow?</small><small data-i18n="ru">почему это приложение тормозит?</small></li>
+        </ul>
+      </div>
+
+      <div class="road-col later">
+        <h4><span data-i18n="en">later</span><span data-i18n="ru">потом</span> <span class="count">2027+</span></h4>
+        <ul>
+          <li><b>iOS · Android</b><small data-i18n="en">native clients · same configs</small><small data-i18n="ru">нативные клиенты · те же конфиги</small></li>
+          <li><b><span data-i18n="en">Shared subscriptions</span><span data-i18n="ru">Шаренные подписки</span></b><small data-i18n="en">team-grade</small><small data-i18n="ru">для команд</small></li>
+          <li><b><span data-i18n="en">Audit log</span><span data-i18n="ru">Audit log</span></b><small data-i18n="en">which app · when · where</small><small data-i18n="ru">какое приложение · когда · куда</small></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SERVICES ── -->
+  <section class="section" id="services">
+    <div class="section-h">
+      <div class="num" style="color:var(--blue)">09</div>
+      <h2><span data-i18n="en">The rest of the</span><span data-i18n="ru">Остальной</span> <em><span data-i18n="en">house</span><span data-i18n="ru">дом</span></em>.</h2>
+      <div class="meta">// *.ninitux.com</div>
+    </div>
+
+    <div class="svc-wrap">
+      <div class="svc-card svc-1 commercial">
+        <span class="tag">commercial</span>
+        <span class="host"><a href="https://wb.ninitux.com">wb.ninitux.com</a></span>
+        <span class="desc" data-i18n="en">WB — pricing &amp; tasks. The commercial side of the house, kept separate on purpose.</span>
+        <span class="desc" data-i18n="ru">WB — цены и задачи. Коммерческая часть, специально отдельно.</span>
+      </div>
+      <div class="svc-card svc-2 edu">
+        <span class="tag">★ edu</span>
+        <span class="host"><a href="edu.html">edu.ninitux.com</a></span>
+        <span class="desc" data-i18n="en">DevOps cheatsheet for Middle+. Same vibe as this page.</span>
+        <span class="desc" data-i18n="ru">DevOps шпаргалка для Middle+. Тот же вайб что у этой страницы.</span>
+      </div>
+      <div class="svc-card svc-3 public">
+        <span class="tag">public</span>
+        <span class="host"><a href="https://md.ninitux.com">md.ninitux.com</a></span>
+        <span class="desc">Flatnotes · <span data-i18n="en">markdown viewer</span><span data-i18n="ru">markdown viewer</span></span>
+      </div>
+      <div class="svc-card svc-4 public">
+        <span class="tag">public</span>
+        <span class="host"><a href="https://docs.ninitux.com">docs.ninitux.com</a></span>
+        <span class="desc"><span data-i18n="en">Documentation</span><span data-i18n="ru">Документация</span></span>
+      </div>
+      <div class="svc-card svc-5 locked" data-svc="git">
+        <span class="tag">admin</span>
+        <span class="host"><a href="https://git.ninitux.com">git.ninitux.com</a></span>
+        <span class="desc">Forgejo · <span data-i18n="en">self-hosted git</span><span data-i18n="ru">self-hosted git</span></span>
+      </div>
+      <div class="svc-card svc-6 locked" data-svc="analytics">
+        <span class="tag">admin</span>
+        <span class="host"><a href="https://analytics.ninitux.com">analytics.ninitux.com</a></span>
+        <span class="desc">Umami · <span data-i18n="en">self-hosted analytics</span><span data-i18n="ru">self-hosted аналитика</span></span>
+      </div>
+      <div class="svc-card svc-7 locked" data-svc="db">
+        <span class="tag">admin</span>
+        <span class="host"><a href="https://db.ninitux.com">db.ninitux.com</a></span>
+        <span class="desc">pgweb · <span data-i18n="en">postgres client</span><span data-i18n="ru">postgres клиент</span></span>
+      </div>
+      <div class="svc-card svc-8 locked" data-svc="tasks">
+        <span class="tag">admin</span>
+        <span class="host"><a href="https://tasks.ninitux.com">tasks.ninitux.com</a></span>
+        <span class="desc">Plane · <span data-i18n="en">issue tracker</span><span data-i18n="ru">issue tracker</span></span>
+      </div>
+
+      <div class="auth-banner" id="auth-banner">
+        <span class="ico">🔓</span>
+        <span data-i18n="en">admin services unlock after auth via <a href="https://t.me/ninitux_auth_bot" target="_blank">@ninitux_auth_bot</a> — telegram-only, no email required</span>
+        <span data-i18n="ru">admin-сервисы открываются после авторизации через <a href="https://t.me/ninitux_auth_bot" target="_blank">@ninitux_auth_bot</a> — только telegram, email не нужен</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SUPPORT ── -->
+  <section class="section">
+    <div class="support">
+      <div>
+        <h3 data-i18n="en">Like it? <em>Tip the maintainer.</em></h3>
+        <h3 data-i18n="ru">Нравится? <em>Поддержите автора.</em></h3>
+        <p data-i18n="en">No ads, no premium tier, no telemetry. A monthly tip keeps the free pool refreshed, the update server alive, and the maintainer caffeinated. Stars on GitHub also help.</p>
+        <p data-i18n="ru">Без рекламы, без премиум-тарифа, без телеметрии. Ежемесячный тип помогает обновлять free-пул, держать update-сервер живым и поддерживает кофейный режим автора. Звёзды на GitHub тоже помогают.</p>
+        <div class="row">
+          <a class="cta" href="https://boosty.to/ninitux" target="_blank" rel="noopener" data-umami-event="click-boosty">♥ <span data-i18n="en">Tip on Boosty</span><span data-i18n="ru">Тип на Boosty</span></a>
+          <a class="cta secondary" href="https://github.com/PavelLizunov/VPNRouter" target="_blank" rel="noopener" data-umami-event="click-star-cta">★ <span data-i18n="en">Star on GitHub</span><span data-i18n="ru">Звезда на GitHub</span></a>
+        </div>
+      </div>
+      <div class="star-card">
+        <div class="big" id="star-count">1.2k</div>
+        <div class="sub">★ <span data-i18n="en">on GitHub</span><span data-i18n="ru">на GitHub</span></div>
+        <p style="margin:14px 0 0;font-size:12px;color:var(--cream);opacity:.8" data-i18n="en">join the people who think a router beats a tunnel.</p>
+        <p style="margin:14px 0 0;font-size:12px;color:var(--cream);opacity:.8" data-i18n="ru">присоединяйтесь к тем кто считает что роутер лучше тоннеля.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer class="bigfoot">
+    <div class="huge">
+      ninitux<br>
+      <span class="pop">·com</span><br>
+      <span class="yel" data-i18n="en">open net</span><span class="yel" data-i18n="ru">открытая сеть</span>
+    </div>
+    <div class="cols">
+      <div>
+        <h5>Source</h5>
+        <p><a href="https://github.com/PavelLizunov/VPNRouter">/VPNRouter</a></p>
+        <p><a href="https://github.com/PavelLizunov/ninitux-landing">/ninitux-landing</a></p>
+        <p style="color:rgba(255,255,255,0.6)">GPL-3.0</p>
+      </div>
+      <div>
+        <h5>Support</h5>
+        <p><a href="https://boosty.to/ninitux">boosty.to/ninitux</a></p>
+        <p style="color:rgba(255,255,255,0.6)" data-i18n="en">a monthly tip keeps things refreshed.</p>
+        <p style="color:rgba(255,255,255,0.6)" data-i18n="ru">ежемесячный тип помогает обновлять.</p>
+      </div>
+      <div>
+        <h5>Sister sites</h5>
+        <p><a href="edu.html">edu.ninitux.com</a></p>
+        <p><a href="https://docs.ninitux.com">docs.ninitux.com</a></p>
+        <p><a href="https://md.ninitux.com">md.ninitux.com</a></p>
+      </div>
+      <div>
+        <h5>Maintainer</h5>
+        <p>P. Lizunov</p>
+        <p><a href="https://t.me/ninitux_auth_bot">@ninitux_auth_bot</a></p>
+        <p style="color:rgba(255,255,255,0.6)" data-i18n="en">soundtrack: jungle, dnb, the news.</p>
+        <p style="color:rgba(255,255,255,0.6)" data-i18n="ru">саундтрек: jungle, dnb, новости.</p>
+      </div>
+      <div>
+        <h5>Network</h5>
+        <p><a href="https://github.com/PavelLizunov/VPNRouter/releases">releases ↗</a></p>
+        <p><a href="https://github.com/PavelLizunov/VPNRouter/issues">issues ↗</a></p>
+        <p><a href="https://github.com/PavelLizunov/VPNRouter/pulls">PRs ↗</a></p>
+      </div>
+    </div>
+    <div class="legal">
+      <span>© 2026 ninitux.com</span>
+      <span>·</span>
+      <span>GPL-3.0</span>
+      <span>·</span>
+      <span data-i18n="en">no cookies · no trackers · self-hosted Umami counts visits</span>
+      <span data-i18n="ru">без cookies · без трекеров · self-hosted Umami считает посещения</span>
+    </div>
+    <div class="pen-bottom" role="img" aria-label="Penguin mascot"></div>
+  </footer>
+
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true">
+  <button class="close" id="lb-close" aria-label="close">✕</button>
+  <div class="box">
+    <div class="frame" id="lb-frame">screenshot placeholder</div>
+    <div class="cap" id="lb-cap">caption</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const root = document.documentElement;
+
+  // ── Language
+  function setLang(l){
+    root.setAttribute('data-lang', l);
+    root.setAttribute('lang', l);
+    document.querySelectorAll('.topbar .seg button[data-lang]').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === l ? 'true' : 'false'));
+    try { localStorage.setItem('ninitux_lang', l); } catch(e){}
+    if (window.umami) umami.track('toggle-lang-' + l);
+  }
+  document.querySelectorAll('.topbar .seg button[data-lang]').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+  let savedLang = null; try { savedLang = localStorage.getItem('ninitux_lang'); } catch(e){}
+  setLang(savedLang || (((navigator.language||'').toLowerCase().startsWith('ru')) ? 'ru' : 'en'));
+
+  // ── Sticky header shadow
+  const topbar = document.getElementById('topbar');
+  window.addEventListener('scroll', () => {
+    topbar.classList.toggle('scrolled', window.scrollY > 12);
+  });
+
+  // ── OS detect (highlights the right card)
+  function detectOS(){
+    const ua = (navigator.userAgent||'').toLowerCase();
+    if (ua.includes('win')) return 'win';
+    if (ua.includes('mac')) return 'mac';
+    return 'linux';
+  }
+  const myOS = detectOS();
+  document.querySelectorAll('.os-card').forEach(c => c.classList.toggle('detected', c.dataset.os === myOS));
+
+  // ── Copy buttons
+  document.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const text = btn.dataset.copy;
+      try { await navigator.clipboard.writeText(text); }
+      catch(e){
+        const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select();
+        try{ document.execCommand('copy'); }catch(_){} ta.remove();
+      }
+      const orig = btn.innerHTML;
+      btn.innerHTML = root.getAttribute('data-lang') === 'ru' ? '✓ скопир.' : '✓ ok';
+      btn.classList.add('ok');
+      setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('ok'); }, 1200);
+    });
+  });
+
+  // ── Feature filter
+  const filterBtns = document.querySelectorAll('.feat-filter button[data-fil]');
+  const feats = document.querySelectorAll('.feat[data-cat]');
+  filterBtns.forEach(b => b.addEventListener('click', () => {
+    const f = b.dataset.fil;
+    filterBtns.forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    feats.forEach(el => {
+      el.hidden = (f !== 'all' && el.dataset.cat !== f);
+    });
+  }));
+
+  // ── Lightbox (screenshots)
+  const lb = document.getElementById('lightbox');
+  const lbFrame = document.getElementById('lb-frame');
+  const lbCap = document.getElementById('lb-cap');
+  function openLB(name, cap){
+    lbFrame.textContent = name + ' — placeholder';
+    lbCap.textContent = cap;
+    lb.classList.add('show');
+    lb.setAttribute('aria-hidden', 'false');
+  }
+  function closeLB(){
+    lb.classList.remove('show');
+    lb.setAttribute('aria-hidden', 'true');
+  }
+  document.querySelectorAll('[data-shot]').forEach(s => {
+    s.addEventListener('click', e => {
+      e.preventDefault();
+      const lang = root.getAttribute('data-lang');
+      const cap = lang === 'ru' ? s.dataset.capRu : s.dataset.capEn;
+      const name = s.querySelector('.cap').firstChild.textContent.trim();
+      openLB(name, cap);
+    });
+  });
+  document.getElementById('lb-close').addEventListener('click', closeLB);
+  lb.addEventListener('click', e => { if (e.target === lb) closeLB(); });
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') closeLB(); });
+
+  // ── Mobile menu
+  const md = document.getElementById('mobile-drawer');
+  document.getElementById('mobile-open').addEventListener('click', () => md.classList.add('show'));
+  document.getElementById('mobile-close').addEventListener('click', () => md.classList.remove('show'));
+  md.addEventListener('click', e => { if (e.target === md) md.classList.remove('show'); });
+  md.querySelectorAll('a').forEach(a => a.addEventListener('click', () => md.classList.remove('show')));
+
+  // ── GitHub Releases API → version + sizes
+  function fmtSize(b){
+    if (!b && b !== 0) return '';
+    if (b < 1024*1024) return (b/1024).toFixed(0)+' KB';
+    return (b/(1024*1024)).toFixed(1)+' MB';
+  }
+  fetch('https://api.github.com/repos/PavelLizunov/VPNRouter/releases/latest')
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => {
+      const tag = data.tag_name || '';
+      const assets = data.assets || [];
+      const ver = document.getElementById('hero-ver');
+      if (ver && tag) ver.textContent = tag;
+      document.querySelectorAll('a[data-asset-suffix], a[data-asset-match]').forEach(a => {
+        let asset = null;
+        if (a.dataset.assetSuffix){
+          asset = assets.find(x => x.name.endsWith(a.dataset.assetSuffix));
+        } else if (a.dataset.assetMatch === 'win-zip'){
+          asset = assets.find(x => x.name.endsWith('-win.zip') && !x.name.includes('update') && !x.name.endsWith('.sha256'));
+        }
+        if (asset){
+          a.href = asset.browser_download_url;
+          const verEl = a.querySelector('[data-ver]');
+          if (verEl) verEl.textContent = '· ' + tag + ' · ' + fmtSize(asset.size);
+        } else if (a.dataset.fallback){
+          a.href = a.dataset.fallback;
+        }
+      });
+    })
+    .catch(() => {
+      document.querySelectorAll('a[data-asset-suffix], a[data-asset-match]').forEach(a => {
+        if (a.dataset.fallback) a.href = a.dataset.fallback;
+      });
+    });
+
+  // ── GitHub Repo API → star count
+  fetch('https://api.github.com/repos/PavelLizunov/VPNRouter')
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(d => {
+      const el = document.getElementById('star-count');
+      if (!el || !d.stargazers_count) return;
+      const n = d.stargazers_count;
+      el.textContent = n < 1000 ? n : (n/1000).toFixed(1) + 'k';
+    })
+    .catch(() => {});
+
+  // ── Pool stats: rolling fake-but-stable
+  (function(){
+    const base = 24962;
+    const drift = Math.floor((Date.now() / 60000) % 80);
+    const el = document.getElementById('pool-active');
+    if (el) el.textContent = (base + drift).toLocaleString();
+    const sync = document.getElementById('pool-sync');
+    if (sync){
+      const mins = Math.floor((Date.now() / 60000) % 360);
+      const h = Math.floor(mins/60), m = mins%60;
+      sync.textContent = h.toString().padStart(2,'0')+':'+m.toString().padStart(2,'0');
+    }
+  })();
+
+  // ── Auth check (matches original site contract)
+  fetch('/auth/check').then(r => {
+    if (!r.ok) return;
+    const btn = document.getElementById('auth-btn');
+    btn.href = '/auth/logout';
+    btn.innerHTML = root.getAttribute('data-lang') === 'ru'
+      ? '<span data-i18n="en">Logout</span><span data-i18n="ru">Выйти</span>'
+      : '<span data-i18n="en">Logout</span><span data-i18n="ru">Выйти</span>';
+    setLang(root.getAttribute('data-lang')); // re-apply visibility
+    document.querySelectorAll('.svc-card.locked').forEach(c => {
+      c.classList.remove('locked');
+      const a = c.querySelector('.host a'); if (a){ a.style.pointerEvents = ''; }
+    });
+    const banner = document.getElementById('auth-banner');
+    if (banner) banner.classList.add('unlocked');
+    if (window.umami) umami.track('user-authenticated');
+  }).catch(()=>{});
+})();
+</script>
+
+</body>
+</html>

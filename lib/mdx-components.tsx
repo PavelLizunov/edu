@@ -11,12 +11,6 @@ interface CodeChildProps {
   children?: ReactNode;
 }
 
-/**
- * Map a Markdown fenced code block (`'```lang\n...\n```'`) onto our styled
- * CodeBlock. Markdown is safer than `<CodeBlock>{`...`}</CodeBlock>` because
- * MDX does NOT parse JSX expressions inside fenced code — so `{{ jinja }}`,
- * `${env}`, JSON objects etc. just work.
- */
 function PreOverride(props: ComponentProps<"pre">) {
   const child = Children.only(props.children) as ReactElement<CodeChildProps>;
   if (!isValidElement<CodeChildProps>(child) || child.type !== "code") {
@@ -36,9 +30,17 @@ function PreOverride(props: ComponentProps<"pre">) {
 }
 
 /**
- * Registry of components available inside MDX topic files.
- * Topic authors use these as JSX inside the .mdx body.
+ * Section eyebrow — markdown `## Аналогия` etc. renders as a sticker pill.
+ * Colour cycling between lime/pink/blue/yellow lives in globals.css via :nth-of-type.
  */
+function H2Eyebrow({ children, ...props }: ComponentProps<"h2">) {
+  return (
+    <h2 className="eb" {...props}>
+      {children}
+    </h2>
+  );
+}
+
 export const mdxComponents: MDXComponents = {
   AnalogyBox,
   ConceptCard,
@@ -47,4 +49,6 @@ export const mdxComponents: MDXComponents = {
   QuizCard,
   // Markdown-fenced code blocks render via our styled CodeBlock too.
   pre: PreOverride,
+  // ## section headings become sticker eyebrows.
+  h2: H2Eyebrow,
 };

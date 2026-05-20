@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="ru" data-lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>edu.ninitux ★ Шпаргалка инженера для Middle+</title>
+<meta name="description" content="DevOps cheatsheet for Middle+ engineers: analogies → concepts → working commands → self-check. No water, no marketing, no stock photos.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23FFE600'/><text y='80' font-size='80'>📚</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:    #FFFBEC;
+  --paper:    #FFF8DC;
+  --yellow:   #FFE600;
+  --pink:     #FF3E8E;
+  --lime:     #C8FF3D;
+  --blue:     #2D5BFF;
+  --red:      #FF3B1F;
+  --sky:      #9DE7FF;
+  --purple:   #B68CFF;
+  --mint:     #B7F0CC;
+  --peach:    #FFC07A;
+  --ink:      #0A0907;
+  --ink-2:    #2B261C;
+  --ink-mute: #6B6557;
+  --ink-dim:  #9B947F;
+
+  --sans:    "Space Grotesk","Bricolage Grotesque",system-ui,sans-serif;
+  --display: "Bricolage Grotesque","Space Grotesk",sans-serif;
+  --mono:    "Space Mono","IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:120px}
+html,body{margin:0;padding:0;background:var(--cream);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{
+  background:
+    radial-gradient(circle at 8% 6%, rgba(255,62,142,0.08), transparent 35%),
+    radial-gradient(circle at 92% 8%, rgba(45,91,255,0.08), transparent 35%),
+    radial-gradient(circle at 50% 100%, rgba(200,255,61,0.08), transparent 40%),
+    var(--cream);
+  background-attachment:fixed;
+  overflow-x:hidden;
+}
+[hidden]{display:none !important}
+
+a{color:var(--ink);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;text-decoration-color:var(--pink)}
+a:hover{background:var(--yellow);color:var(--ink);text-decoration-color:var(--ink)}
+::selection{background:var(--pink);color:var(--cream)}
+button{font-family:inherit}
+
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px}
+
+:root[data-lang="en"] [data-i18n="ru"]{display:none}
+:root[data-lang="ru"] [data-i18n="en"]{display:none}
+
+/* ── MARQUEE ────────────────────────────────────────── */
+.marquee{
+  background:var(--ink);color:var(--lime);
+  border-bottom:3px solid var(--ink);
+  padding:10px 0;font-family:var(--mono);font-weight:700;
+  font-size:13px;letter-spacing:.04em;text-transform:uppercase;
+  overflow:hidden;white-space:nowrap;display:flex;align-items:center;
+}
+.marquee .track{display:inline-flex;gap:32px;animation:scroll 40s linear infinite;padding-right:32px;will-change:transform}
+.marquee .track span{display:inline-flex;align-items:center;gap:8px}
+.marquee .track .dot{color:var(--pink)}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion: reduce){
+  .marquee .track{animation:none}.marquee{justify-content:center}
+}
+
+/* ── TOP BAR ────────────────────────────────────────── */
+.topbar{
+  display:flex;align-items:center;gap:16px;padding:18px 0 14px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+  position:sticky;top:0;z-index:20;background:var(--cream);
+  border-bottom:1px solid transparent;
+  transition:border-color .15s, box-shadow .15s;
+}
+.topbar.scrolled{border-bottom-color:var(--ink);box-shadow:0 4px 0 var(--blue)}
+.topbar .brand{
+  display:inline-flex;align-items:center;gap:10px;
+  background:var(--ink);color:var(--lime);padding:7px 14px;
+  border-radius:999px;font-family:var(--sans);font-weight:700;font-size:14.5px;letter-spacing:0;
+  text-transform:none;text-decoration:none;
+  transform:rotate(-1.5deg);box-shadow:3px 3px 0 var(--blue);
+  transition:transform .12s, box-shadow .12s;
+}
+.topbar .brand:hover{transform:rotate(-2.5deg) scale(1.04);box-shadow:5px 5px 0 var(--blue);background:var(--ink);color:var(--yellow)}
+.topbar .brand .star{color:var(--yellow);font-size:16px}
+.topbar .back{
+  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink);text-decoration:none;padding:5px 12px;border:2px solid var(--ink);border-radius:999px;
+  background:var(--cream);
+}
+.topbar .back:hover{background:var(--yellow)}
+.topbar .nav{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;align-items:center}
+.topbar .nav a.nl{
+  color:var(--ink);text-decoration:none;
+  padding:5px 11px;border:2px solid var(--ink);border-radius:999px;
+  background:var(--cream);font-size:12px;font-family:var(--mono);font-weight:500;
+  text-transform:uppercase;letter-spacing:.06em;
+  transition:transform .12s, background .12s;
+}
+.topbar .nav a.nl:hover{background:var(--yellow);transform:translateY(-1px)}
+.topbar .nav .seg{
+  display:inline-flex;border:2px solid var(--ink);border-radius:999px;
+  background:var(--cream);overflow:hidden;
+}
+.topbar .nav .seg button{
+  appearance:none;background:transparent;border:0;
+  font:inherit;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:6px 10px;cursor:pointer;color:var(--ink);
+}
+.topbar .nav .seg button[aria-pressed="true"]{background:var(--ink);color:var(--lime)}
+.topbar .nav .seg button:hover{background:var(--yellow)}
+.topbar .nav .seg button[aria-pressed="true"]:hover{background:var(--ink-2);color:var(--lime)}
+
+/* search */
+.searchbar{
+  display:inline-flex;align-items:center;gap:8px;
+  border:2px solid var(--ink);border-radius:999px;
+  background:var(--cream);padding:4px 12px 4px 4px;
+  font-family:var(--mono);font-size:13px;
+}
+.searchbar input{
+  appearance:none;background:transparent;border:0;outline:0;
+  font-family:var(--mono);font-size:13px;color:var(--ink);padding:6px 8px;width:200px;
+}
+.searchbar .ico{
+  background:var(--lime);color:var(--ink);width:30px;height:30px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;font-weight:700;border:2px solid var(--ink);
+}
+
+/* ── SCREENS ────────────────────────────────────────── */
+.screen{display:none}
+.screen.active{display:block}
+
+/* ── HERO ───────────────────────────────────────────── */
+.hero{position:relative;padding:36px 0 40px}
+.hero .eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  background:var(--blue);color:var(--cream);
+  border:3px solid var(--ink);border-radius:999px;padding:6px 18px;
+  font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+  transform:rotate(-1.5deg);box-shadow:4px 4px 0 var(--ink);
+  margin-bottom:26px;
+}
+.hero .eyebrow .ico{
+  width:9px;height:9px;background:var(--lime);border-radius:50%;
+  animation:blink 1.4s steps(2) infinite;
+}
+@keyframes blink{50%{opacity:0.35}}
+
+.hero h1{
+  font-family:var(--display);font-weight:800;
+  font-size:clamp(48px, 9vw, 140px);line-height:0.88;letter-spacing:-0.04em;
+  margin:0 0 18px;color:var(--ink);
+}
+.hero h1 .pop{
+  background:var(--pink);color:var(--cream);padding:0 14px;display:inline-block;
+  border-radius:10px;transform:rotate(-1.8deg);box-shadow:7px 7px 0 var(--ink);
+}
+.hero h1 .yel{
+  background:var(--yellow);color:var(--ink);padding:0 12px;display:inline-block;
+  border:3px solid var(--ink);border-radius:10px;transform:rotate(1.2deg);
+}
+.hero h1 .underline{
+  background-image:linear-gradient(transparent 76%, var(--lime) 76%);
+  padding:0 8px;
+}
+.hero .lede{
+  font-size:clamp(18px,2vw,22px);line-height:1.45;color:var(--ink-2);max-width:62ch;
+  margin:0 0 28px;font-weight:500;
+}
+.hero .lede b{color:var(--ink);font-weight:700}
+
+.stats-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.stat-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  border:3px solid var(--ink);border-radius:999px;
+  padding:7px 16px;font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;
+  box-shadow:3px 3px 0 var(--ink);
+  transform:rotate(-1deg);
+}
+.stat-pill:nth-child(2){transform:rotate(1.5deg);background:var(--yellow);color:var(--ink)}
+.stat-pill:nth-child(3){transform:rotate(-0.5deg);background:var(--lime);color:var(--ink)}
+.stat-pill:nth-child(4){transform:rotate(2deg);background:var(--sky);color:var(--ink)}
+.stat-pill:nth-child(1){background:var(--pink);color:var(--cream)}
+.stat-pill b{font-family:var(--display);font-weight:800;font-size:22px}
+
+/* ── SECTION HEAD ───────────────────────────────────── */
+.section{padding:42px 0;position:relative}
+.section-h{display:flex;align-items:baseline;gap:18px;margin-bottom:24px;flex-wrap:wrap}
+.section-h .num{
+  font-family:var(--display);font-weight:800;font-size:80px;line-height:0.8;
+  letter-spacing:-0.03em;flex:0 0 auto;
+}
+.section-h h2{
+  font-family:var(--display);font-weight:800;font-size:clamp(34px,5vw,56px);line-height:0.95;letter-spacing:-0.02em;
+  color:var(--ink);margin:0;flex:1;min-width:240px;
+}
+.section-h h2 em{
+  font-style:normal;background:var(--yellow);padding:0 10px;
+  box-shadow:5px 5px 0 var(--ink);transform:rotate(-1deg);display:inline-block;
+}
+.section-h .meta{
+  font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--ink-mute);
+}
+
+/* ── CATEGORY CARDS ─────────────────────────────────── */
+.cats{display:grid;grid-template-columns:1.8fr 1fr 1fr;gap:18px}
+.cat{
+  border:3px solid var(--ink);border-radius:18px;padding:22px;
+  display:flex;flex-direction:column;gap:8px;
+  text-decoration:none;color:var(--ink);
+  box-shadow:6px 6px 0 var(--ink);
+  transition:transform .12s, box-shadow .12s;
+  position:relative;cursor:pointer;
+}
+.cat:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--ink);background:var(--cream)}
+.cat-1{background:var(--blue);color:var(--cream)}
+.cat-1 .label,.cat-1 .count,.cat-1 .desc{color:var(--cream)}
+.cat-2{background:var(--paper)}
+.cat-3{background:var(--cream)}
+.cat .label{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-mute)}
+.cat .title{font-family:var(--display);font-weight:800;font-size:42px;letter-spacing:-0.02em;margin:0;line-height:1;color:var(--ink)}
+.cat-1 .title{color:var(--cream)}
+.cat .count{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--ink-2);margin-top:4px;letter-spacing:.04em}
+.cat .desc{font-size:14px;color:var(--ink-2);line-height:1.45;margin:4px 0 0}
+.cat .ribbon{
+  position:absolute;top:-13px;right:18px;
+  background:var(--lime);color:var(--ink);border:2px solid var(--ink);
+  font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 12px;border-radius:999px;
+}
+.cat-1 .ribbon{background:var(--lime)}
+.cat-2 .ribbon, .cat-3 .ribbon{background:var(--ink);color:var(--lime)}
+.cat[data-soon]{opacity:.85}
+.cat[data-soon]:hover{opacity:1}
+.cat[data-soon] .title{color:var(--ink-mute)}
+
+/* ── TOPIC GRID (home) ──────────────────────────────── */
+.topic-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+.topic-card{
+  display:flex;flex-direction:column;gap:8px;
+  border:3px solid var(--ink);border-radius:16px;padding:18px 20px;
+  background:var(--cream);color:var(--ink);
+  box-shadow:5px 5px 0 var(--ink);
+  text-decoration:none;
+  transition:transform .12s, box-shadow .12s;position:relative;
+}
+.topic-card:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink);background:var(--cream)}
+.topic-card .name{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-0.02em;line-height:1;color:var(--ink)}
+.topic-card .name .hash{color:var(--pink);font-weight:800;margin-right:4px}
+.topic-card .desc{font-size:14px;color:var(--ink-2);line-height:1.45;margin:2px 0 6px}
+.topic-card .meta{
+  font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-mute);display:flex;gap:10px;align-items:center;margin-top:auto;
+}
+.topic-card .meta b{color:var(--ink)}
+.topic-card .sticker{
+  position:absolute;top:-12px;right:16px;
+  font-family:var(--mono);font-weight:700;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 10px;border-radius:999px;border:2px solid var(--ink);
+  background:var(--ink);color:var(--cream);
+}
+/* color rotation */
+.topic-card.t-1{grid-column:span 6;background:var(--yellow)}
+.topic-card.t-1 .sticker{background:var(--ink);color:var(--yellow)}
+.topic-card.t-2{grid-column:span 6;background:var(--pink);color:var(--cream)}
+.topic-card.t-2 .name,.topic-card.t-2 .desc{color:var(--cream)}
+.topic-card.t-2 .meta{color:rgba(255,255,255,0.7)}
+.topic-card.t-2 .meta b{color:var(--lime)}
+.topic-card.t-2 .name .hash{color:var(--yellow)}
+.topic-card.t-2 .sticker{background:var(--lime);color:var(--ink)}
+.topic-card.t-3{grid-column:span 4;background:var(--sky)}
+.topic-card.t-3 .sticker{background:var(--blue);color:var(--cream)}
+.topic-card.t-4{grid-column:span 4;background:var(--lime)}
+.topic-card.t-4 .sticker{background:var(--ink);color:var(--lime)}
+.topic-card.t-5{grid-column:span 4;background:var(--purple);color:var(--cream)}
+.topic-card.t-5 .name,.topic-card.t-5 .desc{color:var(--cream)}
+.topic-card.t-5 .meta{color:rgba(255,255,255,0.7)}
+.topic-card.t-5 .meta b{color:var(--yellow)}
+.topic-card.t-5 .name .hash{color:var(--lime)}
+.topic-card.t-5 .sticker{background:var(--yellow);color:var(--ink)}
+.topic-card.t-6{grid-column:span 6;background:var(--ink);color:var(--cream)}
+.topic-card.t-6 .name,.topic-card.t-6 .desc{color:var(--cream)}
+.topic-card.t-6 .name .hash{color:var(--lime)}
+.topic-card.t-6 .meta{color:rgba(255,255,255,0.7)}
+.topic-card.t-6 .meta b{color:var(--yellow)}
+.topic-card.t-6 .sticker{background:var(--pink);color:var(--cream)}
+.topic-card.t-6:hover{background:var(--ink-2)}
+.topic-card.t-7{grid-column:span 3;background:var(--peach)}
+.topic-card.t-7 .sticker{background:var(--ink);color:var(--peach)}
+.topic-card.t-8{grid-column:span 3;background:var(--mint)}
+.topic-card.t-8 .sticker{background:var(--ink);color:var(--mint)}
+
+.topic-card[data-hidden]{display:none}
+
+/* ── TOPIC PAGE ─────────────────────────────────────── */
+.crumb-bar{
+  font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;
+  margin:32px 0 18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.crumb-bar a{
+  text-decoration:none;background:var(--cream);color:var(--ink);
+  border:2px solid var(--ink);padding:4px 12px;border-radius:999px;font-weight:600;
+}
+.crumb-bar a:hover{background:var(--yellow)}
+.crumb-bar .sep{color:var(--ink-mute);font-weight:700}
+.crumb-bar .cur{
+  background:var(--ink);color:var(--lime);padding:4px 14px;border-radius:999px;font-weight:700;text-transform:uppercase;border:2px solid var(--ink);
+}
+
+.topic-head{padding:8px 0 24px}
+.topic-head h1{
+  font-family:var(--display);font-weight:800;font-size:clamp(56px,8vw,108px);line-height:0.88;letter-spacing:-0.03em;
+  color:var(--ink);margin:0 0 14px;
+}
+.topic-head h1 .hash{color:var(--pink);margin-right:8px}
+.topic-head h1 em{
+  font-style:normal;background:var(--yellow);padding:0 12px;
+  box-shadow:6px 6px 0 var(--ink);transform:rotate(-1.3deg);display:inline-block;border-radius:8px;
+}
+.topic-head .sub{font-size:clamp(17px,1.8vw,22px);line-height:1.45;color:var(--ink-2);max-width:60ch;margin:0;font-weight:500}
+
+/* sub-section eyebrow */
+.eb{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink);margin:36px 0 14px;
+  background:var(--lime);padding:5px 14px;border:2.5px solid var(--ink);border-radius:999px;
+  box-shadow:3px 3px 0 var(--ink);
+  transform:rotate(-1.2deg);
+}
+.eb.alt{background:var(--pink);color:var(--cream)}
+.eb.b{background:var(--blue);color:var(--cream)}
+.eb.y{background:var(--yellow);color:var(--ink)}
+
+/* ── ANALOGY ────────────────────────────────────────── */
+.analogy{
+  border:3px solid var(--ink);border-radius:22px;background:var(--yellow);
+  padding:28px 32px;box-shadow:8px 8px 0 var(--pink);
+  display:grid;grid-template-columns:80px 1fr;gap:24px;align-items:center;
+  position:relative;
+}
+.analogy .bulb{
+  width:80px;height:80px;border-radius:50%;
+  background:var(--lime);border:3px solid var(--ink);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:42px;line-height:1;
+  box-shadow:4px 4px 0 var(--ink);transform:rotate(-8deg);
+}
+.analogy .body{
+  font-family:var(--sans);font-weight:500;font-size:clamp(18px,2vw,24px);line-height:1.45;color:var(--ink);
+}
+.analogy .body b{font-weight:800;background:var(--ink);color:var(--lime);padding:0 6px;border-radius:5px}
+.analogy .body em{font-style:italic;color:var(--ink-2)}
+.analogy .label{
+  position:absolute;top:-13px;left:30px;
+  background:var(--ink);color:var(--yellow);
+  font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 12px;border-radius:999px;border:2px solid var(--ink);
+}
+
+/* ── CONCEPT CARDS ──────────────────────────────────── */
+.concept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.concept{
+  border:3px solid var(--ink);border-radius:16px;padding:18px 20px;
+  display:flex;flex-direction:column;gap:6px;position:relative;
+  box-shadow:5px 5px 0 var(--ink);
+  transition:transform .12s, box-shadow .12s;
+}
+.concept:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink)}
+.concept .ico{
+  width:42px;height:42px;border:2.5px solid var(--ink);border-radius:12px;
+  background:var(--cream);display:inline-flex;align-items:center;justify-content:center;
+  margin-bottom:6px;
+}
+.concept .ico svg{width:22px;height:22px;color:var(--ink)}
+.concept h3{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-0.015em;margin:0;line-height:1.05;color:var(--ink)}
+.concept p{margin:0;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+.concept .badge{
+  position:absolute;top:-12px;right:14px;
+  background:var(--ink);color:var(--cream);
+  font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  padding:2px 10px;border-radius:999px;border:2px solid var(--ink);
+}
+.concept.c-1{background:var(--cream)}
+.concept.c-1 .badge{background:var(--pink);color:var(--cream)}
+.concept.c-2{background:var(--sky)}
+.concept.c-2 .badge{background:var(--blue);color:var(--cream)}
+.concept.c-3{background:var(--lime)}
+.concept.c-3 .badge{background:var(--ink);color:var(--lime)}
+.concept.c-4{background:var(--yellow)}
+.concept.c-4 .badge{background:var(--ink);color:var(--yellow)}
+.concept.c-5{background:var(--pink);color:var(--cream)}
+.concept.c-5 h3,.concept.c-5 p{color:var(--cream)}
+.concept.c-5 .ico{background:var(--cream)}
+.concept.c-5 .badge{background:var(--lime);color:var(--ink)}
+.concept.c-6{background:var(--purple);color:var(--cream)}
+.concept.c-6 h3,.concept.c-6 p{color:var(--cream)}
+.concept.c-6 .ico{background:var(--cream)}
+.concept.c-6 .badge{background:var(--yellow);color:var(--ink)}
+
+/* ── CODE BLOCK ─────────────────────────────────────── */
+.code-label{
+  font-family:var(--mono);font-size:12px;color:var(--ink-mute);
+  margin:0 0 6px;display:flex;justify-content:space-between;align-items:baseline;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+}
+.code-label .lang{
+  background:var(--ink);color:var(--lime);padding:2px 8px;border-radius:5px;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+}
+.code{
+  background:var(--ink);border:3px solid var(--ink);border-radius:12px;
+  display:grid;grid-template-columns:1fr auto;align-items:stretch;
+  overflow:hidden;margin-bottom:14px;
+  box-shadow:5px 5px 0 var(--pink);
+}
+.code pre{
+  margin:0;padding:18px 22px;
+  font-family:var(--mono);font-size:13.5px;line-height:1.6;
+  color:#E8F6FF;overflow-x:auto;white-space:pre;
+}
+.code pre .k{color:#67E8F9}
+.code pre .s{color:#C8FF3D}
+.code pre .n{color:#FFC857}
+.code pre .c{color:#8B97AB}
+.code pre .p{color:var(--pink);font-weight:700;user-select:none}
+.code .copy{
+  appearance:none;background:transparent;border:0;border-left:1px solid rgba(255,255,255,0.15);
+  color:var(--cream);font-family:var(--sans);font-weight:700;font-size:11.5px;
+  padding:0 18px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;min-width:84px;
+}
+.code .copy:hover{background:var(--pink);color:var(--cream)}
+.code .copy.ok{background:var(--lime);color:var(--ink)}
+
+/* ── QUIZ ───────────────────────────────────────────── */
+.quiz{
+  border:3px solid var(--ink);border-radius:22px;
+  background:var(--ink);color:var(--cream);
+  padding:28px 32px;box-shadow:8px 8px 0 var(--lime);
+  position:relative;
+}
+.quiz::before{
+  content:"🎯";position:absolute;top:-22px;left:24px;
+  font-size:36px;background:var(--lime);border:3px solid var(--ink);
+  width:54px;height:54px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  transform:rotate(-8deg);box-shadow:3px 3px 0 var(--ink);
+}
+.quiz .label{
+  position:absolute;top:-15px;right:24px;
+  background:var(--yellow);color:var(--ink);border:2px solid var(--ink);
+  font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 14px;border-radius:999px;
+}
+.quiz .q{
+  font-family:var(--display);font-weight:800;font-size:clamp(22px,2.4vw,30px);
+  line-height:1.2;letter-spacing:-0.015em;margin:18px 0 18px;color:var(--cream);
+}
+.quiz .options{display:flex;flex-direction:column;gap:10px}
+.quiz .opt{
+  text-align:left;cursor:pointer;
+  background:var(--cream);color:var(--ink);
+  border:3px solid var(--cream);border-radius:14px;
+  padding:14px 18px;font-family:var(--sans);font-weight:500;font-size:15.5px;line-height:1.4;
+  display:flex;align-items:baseline;gap:14px;
+  transition:transform .12s, background .12s, border-color .12s;
+}
+.quiz .opt::before{
+  content:attr(data-letter);
+  font-family:var(--display);font-weight:800;font-size:20px;color:var(--pink);
+  width:24px;flex:0 0 24px;
+}
+.quiz .opt:hover:not(:disabled){background:var(--yellow);transform:translateX(2px)}
+.quiz .opt[data-state="correct"]{background:var(--lime);border-color:var(--lime);color:var(--ink)}
+.quiz .opt[data-state="correct"]::before{color:var(--ink)}
+.quiz .opt[data-state="correct"]::after{content:" ✓";color:var(--ink);font-weight:700;margin-left:auto}
+.quiz .opt[data-state="incorrect"]{background:#FFD2CC;border-color:var(--red);color:var(--ink)}
+.quiz .opt[data-state="incorrect"]::after{content:" ✕";color:var(--red);font-weight:700;margin-left:auto}
+.quiz .opt:disabled{cursor:default}
+.quiz .explain{
+  margin-top:16px;background:var(--lime);color:var(--ink);
+  border:3px solid var(--lime);border-radius:12px;
+  padding:14px 18px;font-size:14.5px;line-height:1.55;display:grid;grid-template-columns:24px 1fr;gap:12px;
+}
+.quiz .explain code{font-family:var(--mono);font-size:13px;background:var(--ink);color:var(--lime);padding:1px 6px;border-radius:5px}
+.quiz .explain .ico{font-family:var(--display);font-weight:800;font-size:22px;color:var(--ink)}
+
+/* ── PREV / NEXT ────────────────────────────────────── */
+.prevnext{
+  margin-top:32px;display:grid;grid-template-columns:1fr 1fr;gap:18px;
+}
+.prevnext a{
+  display:flex;flex-direction:column;gap:4px;
+  text-decoration:none;color:var(--ink);
+  border:3px solid var(--ink);border-radius:16px;padding:18px 22px;
+  background:var(--cream);box-shadow:5px 5px 0 var(--ink);
+  transition:transform .12s, box-shadow .12s;
+}
+.prevnext a:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink);background:var(--cream)}
+.prevnext a.prev{background:var(--sky)}
+.prevnext a.next{background:var(--lime);text-align:right}
+.prevnext a.next.last{background:var(--yellow)}
+.prevnext .label{font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute)}
+.prevnext .title{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-0.02em;color:var(--ink);line-height:1.1}
+.prevnext .title .hash{color:var(--pink);margin-right:4px}
+
+/* ── COMING SOON sub-screen ─────────────────────────── */
+.coming-soon{
+  border:3px dashed var(--ink);border-radius:22px;background:var(--paper);
+  padding:48px;text-align:center;
+}
+.coming-soon h3{
+  font-family:var(--display);font-weight:800;font-size:48px;line-height:1;letter-spacing:-0.02em;
+  margin:0 0 12px;color:var(--ink);
+}
+.coming-soon p{font-size:16px;color:var(--ink-2);margin:0 0 22px;max-width:50ch;margin-left:auto;margin-right:auto;line-height:1.5}
+.coming-soon .cta{
+  display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:var(--cream);
+  border:3px solid var(--ink);border-radius:12px;padding:12px 22px;
+  font-weight:700;text-decoration:none;letter-spacing:.02em;
+  box-shadow:5px 5px 0 var(--pink);
+}
+.coming-soon .cta:hover{color:var(--lime);background:var(--ink)}
+
+/* ── FOOTER ─────────────────────────────────────────── */
+footer.bigfoot{
+  background:var(--ink);color:var(--cream);border-radius:26px;
+  padding:48px 36px;margin:36px 0 28px;position:relative;overflow:hidden;
+}
+footer.bigfoot .huge{
+  font-family:var(--display);font-weight:800;
+  font-size:clamp(72px,12vw,180px);line-height:0.85;letter-spacing:-0.04em;
+  color:var(--cream);margin:0 0 16px;
+}
+footer.bigfoot .huge .pop{background:var(--lime);color:var(--ink);padding:0 14px;border-radius:12px;display:inline-block;transform:rotate(-1.5deg)}
+footer.bigfoot .huge .yel{background:var(--yellow);color:var(--ink);padding:0 14px;border-radius:12px;display:inline-block;transform:rotate(1deg)}
+footer.bigfoot .cols{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:32px;margin-top:24px;
+  padding-top:24px;border-top:2px dashed rgba(255,255,255,0.18);
+  font-family:var(--mono);font-size:13px;
+}
+footer.bigfoot .cols h5{
+  font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--lime);margin:0 0 10px;
+}
+footer.bigfoot .cols p{margin:0 0 4px;line-height:1.5}
+footer.bigfoot .cols a{color:var(--cream);text-decoration:underline;text-decoration-color:var(--pink);text-decoration-thickness:2px}
+footer.bigfoot .cols a:hover{color:var(--lime);background:transparent}
+footer.bigfoot .legal{
+  margin-top:18px;font-family:var(--mono);font-size:11.5px;color:rgba(255,255,255,0.55);
+  display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline;
+}
+
+/* ── MOBILE ─────────────────────────────────────────── */
+@media (max-width:980px){
+  .wrap{padding:0 18px}
+  .cats{grid-template-columns:1fr}
+  .topic-grid > a{grid-column:span 12 !important}
+  .concept-grid{grid-template-columns:1fr}
+  .analogy{grid-template-columns:1fr;gap:14px;text-align:left;padding:22px 24px}
+  .analogy .bulb{width:64px;height:64px;font-size:32px}
+  .prevnext{grid-template-columns:1fr}
+  footer.bigfoot .cols{grid-template-columns:1fr 1fr}
+  .topbar .nav{display:none}
+  .topbar .nav-mobile{display:inline-flex !important}
+  .searchbar{display:none}
+}
+@media (max-width:560px){
+  footer.bigfoot .cols{grid-template-columns:1fr}
+  .section{padding:32px 0}
+  .marquee{font-size:11px}
+}
+
+.topbar .nav-mobile{display:none;margin-left:auto}
+.nav-mobile button{
+  appearance:none;background:var(--ink);color:var(--lime);border:0;
+  width:42px;height:42px;border-radius:12px;font-size:20px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+  box-shadow:3px 3px 0 var(--pink);
+}
+.mobile-drawer{
+  position:fixed;inset:0;z-index:30;background:rgba(10,9,7,0.5);backdrop-filter:blur(4px);
+  display:none;align-items:flex-start;justify-content:flex-end;
+}
+.mobile-drawer.show{display:flex}
+.mobile-drawer .panel{
+  background:var(--cream);width:80%;max-width:340px;height:100%;
+  padding:24px;display:flex;flex-direction:column;gap:14px;
+  border-left:3px solid var(--ink);overflow-y:auto;
+}
+.mobile-drawer .panel button.close{
+  align-self:flex-end;background:var(--pink);color:var(--cream);border:2px solid var(--ink);
+  border-radius:50%;width:38px;height:38px;font-weight:700;cursor:pointer;font-family:var(--mono);font-size:18px;display:inline-flex;align-items:center;justify-content:center;
+}
+.mobile-drawer .panel h5{
+  font-family:var(--mono);font-weight:700;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute);margin:8px 0 4px;
+}
+.mobile-drawer .panel a{
+  padding:9px 14px;background:var(--cream);border:2px solid var(--ink);border-radius:12px;
+  text-decoration:none;color:var(--ink);font-family:var(--mono);font-weight:600;font-size:14px;
+  display:flex;align-items:center;gap:10px;
+}
+.mobile-drawer .panel a:hover{background:var(--yellow)}
+.mobile-drawer .panel a.active{background:var(--lime);font-weight:700}
+</style>
+</head>
+<body>
+
+<!-- MARQUEE -->
+<div class="marquee" aria-hidden="true">
+  <div class="track">
+    <span><span class="dot">●</span> <span data-i18n="ru">шпаргалка для Middle+</span><span data-i18n="en">cheatsheet for Middle+</span></span>
+    <span><span class="dot">●</span> <span data-i18n="ru">8 DevOps тем</span><span data-i18n="en">8 DevOps topics</span></span>
+    <span><span class="dot">●</span> <span data-i18n="ru">аналогии → концепции → команды → квиз</span><span data-i18n="en">analogies → concepts → commands → quiz</span></span>
+    <span><span class="dot">●</span> <span data-i18n="ru">без воды, без маркетинга</span><span data-i18n="en">no water · no marketing</span></span>
+    <span><span class="dot">●</span> <span data-i18n="ru">часть ninitux.com</span><span data-i18n="en">part of ninitux.com</span></span>
+    <span><span class="dot">●</span> <span data-i18n="ru">шпаргалка для Middle+</span><span data-i18n="en">cheatsheet for Middle+</span></span>
+    <span><span class="dot">●</span> <span data-i18n="ru">8 DevOps тем</span><span data-i18n="en">8 DevOps topics</span></span>
+    <span><span class="dot">●</span> <span data-i18n="ru">аналогии → концепции → команды → квиз</span><span data-i18n="en">analogies → concepts → commands → quiz</span></span>
+    <span><span class="dot">●</span> <span data-i18n="ru">без воды, без маркетинга</span><span data-i18n="en">no water · no marketing</span></span>
+    <span><span class="dot">●</span> <span data-i18n="ru">часть ninitux.com</span><span data-i18n="en">part of ninitux.com</span></span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- TOP BAR -->
+  <header class="topbar" id="topbar">
+    <a class="brand" href="#home" data-nav="home" aria-label="edu.ninitux">
+      <span class="star">★</span> edu.ninitux
+    </a>
+    <a class="back" href="main.html">← <span data-i18n="ru">ninitux.com</span><span data-i18n="en">ninitux.com</span></a>
+    <nav class="nav">
+      <a class="nl" href="#cats"><span data-i18n="ru">категории</span><span data-i18n="en">categories</span></a>
+      <a class="nl" href="#topics"><span data-i18n="ru">темы</span><span data-i18n="en">topics</span></a>
+      <a class="nl" href="#topic-kubernetes" data-nav="topic-kubernetes"><span data-i18n="ru">пример темы</span><span data-i18n="en">example topic</span></a>
+      <div class="searchbar">
+        <input type="search" id="topic-search" placeholder="kubernetes…" aria-label="search">
+        <span class="ico">⌕</span>
+      </div>
+      <div class="seg" role="group" aria-label="language">
+        <button data-lang="ru" aria-pressed="true">RU</button>
+        <button data-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </nav>
+    <div class="nav-mobile">
+      <button id="mobile-open" aria-label="menu">≡</button>
+    </div>
+  </header>
+
+  <!-- MOBILE DRAWER -->
+  <div class="mobile-drawer" id="mobile-drawer">
+    <div class="panel">
+      <button class="close" id="mobile-close" aria-label="close">×</button>
+      <h5># nav</h5>
+      <a href="#cats"><span data-i18n="ru">категории</span><span data-i18n="en">categories</span></a>
+      <a href="#topics"><span data-i18n="ru">все темы</span><span data-i18n="en">all topics</span></a>
+      <h5># devops</h5>
+      <a href="#topic-ansible" data-nav="topic-ansible">Ansible &amp; Docker</a>
+      <a href="#topic-terraform" data-nav="topic-terraform">Terraform</a>
+      <a href="#topic-kubernetes" data-nav="topic-kubernetes" class="active">Kubernetes</a>
+      <a href="#topic-networks" data-nav="topic-networks"><span data-i18n="ru">Сети</span><span data-i18n="en">Networks</span></a>
+      <a href="#topic-tls" data-nav="topic-tls">TLS</a>
+      <a href="#topic-postgres" data-nav="topic-postgres">PostgreSQL</a>
+      <a href="#topic-mongo" data-nav="topic-mongo">MongoDB</a>
+      <a href="#topic-elk" data-nav="topic-elk">ELK</a>
+      <h5># <span data-i18n="ru">внешнее</span><span data-i18n="en">elsewhere</span></h5>
+      <a href="main.html">★ ninitux.com</a>
+      <a href="https://github.com/PavelLizunov" target="_blank">GitHub ↗</a>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- ════════════════ HOME SCREEN ═══════════════ -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="screen active" data-screen="home">
+
+    <!-- HERO -->
+    <section class="hero">
+      <p class="eyebrow"><span class="ico"></span> <span data-i18n="ru">edu.ninitux · Middle+</span><span data-i18n="en">edu.ninitux · Middle+</span></p>
+
+      <h1 data-i18n="ru">
+        Шпаргалка<br>
+        <span class="pop">инженера</span><br>
+        для <span class="yel">Middle+</span>
+      </h1>
+      <h1 data-i18n="en">
+        DevOps<br>
+        <span class="pop">cheatsheet</span><br>
+        for <span class="yel">Middle+</span>
+      </h1>
+
+      <p class="lede" data-i18n="ru">
+        Восемь DevOps-тем. <b>Аналогии → концепции → рабочие команды → проверка себя.</b> Без воды, без маркетинга, без stock-фото. Сделано для тех кто читает <code style="font-family:var(--mono);background:var(--paper);border:2px solid var(--ink);padding:1px 6px;border-radius:5px;font-size:14px">man</code>, а не блоги.
+      </p>
+      <p class="lede" data-i18n="en">
+        Eight DevOps topics. <b>Analogies → concepts → working commands → self-check.</b> No water, no marketing, no stock photos. Made for people who read <code style="font-family:var(--mono);background:var(--paper);border:2px solid var(--ink);padding:1px 6px;border-radius:5px;font-size:14px">man</code>, not blogs.
+      </p>
+
+      <div class="stats-row">
+        <span class="stat-pill"><b>8</b> <span data-i18n="ru">тем</span><span data-i18n="en">topics</span></span>
+        <span class="stat-pill"><b>~40</b> <span data-i18n="ru">концепций</span><span data-i18n="en">concepts</span></span>
+        <span class="stat-pill"><b>8</b> <span data-i18n="ru">квизов</span><span data-i18n="en">quizzes</span></span>
+        <span class="stat-pill"><b>~120</b> <span data-i18n="ru">сниппетов</span><span data-i18n="en">snippets</span></span>
+      </div>
+    </section>
+
+    <!-- CATEGORIES -->
+    <section class="section" id="cats">
+      <div class="section-h">
+        <div class="num" style="color:var(--pink)">01</div>
+        <h2 data-i18n="ru"><em>Категории</em>.</h2>
+        <h2 data-i18n="en"><em>Categories</em>.</h2>
+        <div class="meta" data-i18n="ru">// 1 готова · 2 в работе</div>
+        <div class="meta" data-i18n="en">// 1 done · 2 in progress</div>
+      </div>
+
+      <div class="cats">
+        <a class="cat cat-1" href="#topics">
+          <span class="ribbon" data-i18n="ru">★ готово</span><span class="ribbon" data-i18n="en">★ ready</span>
+          <span class="label" data-i18n="ru">8 тем · ~40 концепций</span><span class="label" data-i18n="en">8 topics · ~40 concepts</span>
+          <h3 class="title">DevOps</h3>
+          <p class="desc" data-i18n="ru">Ansible, Terraform, Kubernetes, сети, TLS, базы, ELK. Всё чем работает прод. По одной аналогии и одному квизу на тему.</p>
+          <p class="desc" data-i18n="en">Ansible, Terraform, Kubernetes, networks, TLS, databases, ELK. The stack that runs prod. One analogy and one quiz per topic.</p>
+          <p class="count">→ <span data-i18n="ru">читать</span><span data-i18n="en">read</span></p>
+        </a>
+        <a class="cat cat-2" data-soon>
+          <span class="ribbon" data-i18n="ru">скоро</span><span class="ribbon" data-i18n="en">soon</span>
+          <span class="label">Q3 '26</span>
+          <h3 class="title">Databases</h3>
+          <p class="desc" data-i18n="ru">Глубже чем «PostgreSQL индексы»: транзакции, изоляция, locks, шардинг.</p>
+          <p class="desc" data-i18n="en">Beyond "PostgreSQL indexes": transactions, isolation, locks, sharding.</p>
+        </a>
+        <a class="cat cat-3" data-soon>
+          <span class="ribbon" data-i18n="ru">скоро</span><span class="ribbon" data-i18n="en">soon</span>
+          <span class="label">Q4 '26</span>
+          <h3 class="title">Backend</h3>
+          <p class="desc" data-i18n="ru">REST · gRPC · async patterns · очереди · кеширование.</p>
+          <p class="desc" data-i18n="en">REST · gRPC · async patterns · queues · caching.</p>
+        </a>
+      </div>
+    </section>
+
+    <!-- TOPICS -->
+    <section class="section" id="topics">
+      <div class="section-h">
+        <div class="num" style="color:var(--blue)">02</div>
+        <h2><em>DevOps</em> · <span data-i18n="ru">8 тем</span><span data-i18n="en">8 topics</span></h2>
+        <div class="meta" data-i18n="ru">// кликни любую</div>
+        <div class="meta" data-i18n="en">// click any</div>
+      </div>
+
+      <div class="topic-grid" id="topic-grid">
+        <a class="topic-card t-1" href="#topic-kubernetes" data-nav="topic-kubernetes" data-search="kubernetes k8s pod deployment service ingress">
+          <span class="sticker">★ <span data-i18n="ru">пример</span><span data-i18n="en">example</span></span>
+          <h3 class="name"><span class="hash">#</span>Kubernetes</h3>
+          <p class="desc" data-i18n="ru">Оркестрация контейнеров на проде. От подов до Ingress. Декларативно, эфемерно, масштабируемо.</p>
+          <p class="desc" data-i18n="en">Container orchestration in prod. From pods to Ingress. Declarative, ephemeral, scalable.</p>
+          <p class="meta"><b>6</b> <span data-i18n="ru">концепций</span><span data-i18n="en">concepts</span> · <b>1</b> <span data-i18n="ru">квиз</span><span data-i18n="en">quiz</span></p>
+        </a>
+
+        <a class="topic-card t-2" href="#topic-ansible" data-nav="topic-ansible" data-search="ansible docker container image config playbook">
+          <span class="sticker">f.02</span>
+          <h3 class="name"><span class="hash">#</span>Ansible &amp; Docker</h3>
+          <p class="desc" data-i18n="ru">Конфигурация и упаковка. Idempotent playbook + immutable image — это два слоя одной идеи.</p>
+          <p class="desc" data-i18n="en">Configuration and packaging. Idempotent playbook + immutable image — two layers of the same idea.</p>
+          <p class="meta"><b>5</b> <span data-i18n="ru">концепций</span><span data-i18n="en">concepts</span> · <b>1</b> <span data-i18n="ru">квиз</span><span data-i18n="en">quiz</span></p>
+        </a>
+
+        <a class="topic-card t-3" href="#topic-terraform" data-nav="topic-terraform" data-search="terraform iac state plan apply infrastructure">
+          <span class="sticker">IaC</span>
+          <h3 class="name"><span class="hash">#</span>Terraform</h3>
+          <p class="desc" data-i18n="ru">Инфраструктура как код. State, plan, apply, drift.</p>
+          <p class="desc" data-i18n="en">Infrastructure as code. State, plan, apply, drift.</p>
+          <p class="meta"><b>4</b> · <b>1</b></p>
+        </a>
+
+        <a class="topic-card t-4" href="#topic-networks" data-nav="topic-networks" data-search="network osi dns tcp routing">
+          <span class="sticker">OSI</span>
+          <h3 class="name"><span class="hash">#</span><span data-i18n="ru">Сети</span><span data-i18n="en">Networks</span></h3>
+          <p class="desc" data-i18n="ru">OSI, маршрутизация, DNS. Где пакет, и зачем там столько слоёв.</p>
+          <p class="desc" data-i18n="en">OSI, routing, DNS. Where the packet is, and why so many layers.</p>
+          <p class="meta"><b>5</b> · <b>1</b></p>
+        </a>
+
+        <a class="topic-card t-5" href="#topic-tls" data-nav="topic-tls" data-search="tls ssl certificate handshake mtls">
+          <span class="sticker">★ <span data-i18n="ru">crypto</span><span data-i18n="en">crypto</span></span>
+          <h3 class="name"><span class="hash">#</span>TLS</h3>
+          <p class="desc" data-i18n="ru">Рукопожатие, сертификаты, mTLS. Что подписывает кто и зачем.</p>
+          <p class="desc" data-i18n="en">Handshake, certificates, mTLS. Who signs what and why.</p>
+          <p class="meta"><b>4</b> · <b>1</b></p>
+        </a>
+
+        <a class="topic-card t-6" href="#topic-postgres" data-nav="topic-postgres" data-search="postgres postgresql sql mvcc index replication">
+          <span class="sticker">SQL</span>
+          <h3 class="name"><span class="hash">#</span>PostgreSQL</h3>
+          <p class="desc" data-i18n="ru">Индексы, MVCC, репликация. Что вообще такое vacuum и почему он важен.</p>
+          <p class="desc" data-i18n="en">Indexes, MVCC, replication. What vacuum actually is and why it matters.</p>
+          <p class="meta"><b>6</b> · <b>1</b></p>
+        </a>
+
+        <a class="topic-card t-7" href="#topic-mongo" data-nav="topic-mongo" data-search="mongo mongodb nosql sharding schema">
+          <span class="sticker">NoSQL</span>
+          <h3 class="name"><span class="hash">#</span>MongoDB</h3>
+          <p class="desc" data-i18n="ru">Схема, шардинг, индексы.</p>
+          <p class="desc" data-i18n="en">Schema, sharding, indexes.</p>
+          <p class="meta"><b>4</b> · <b>1</b></p>
+        </a>
+
+        <a class="topic-card t-8" href="#topic-elk" data-nav="topic-elk" data-search="elk elastic kibana logstash logs indexing">
+          <span class="sticker">logs</span>
+          <h3 class="name"><span class="hash">#</span>ELK</h3>
+          <p class="desc" data-i18n="ru">Индексация, шарды, retention.</p>
+          <p class="desc" data-i18n="en">Indexing, shards, retention.</p>
+          <p class="meta"><b>5</b> · <b>1</b></p>
+        </a>
+      </div>
+
+      <p style="margin-top:18px;font-family:var(--mono);font-size:13px;color:var(--ink-mute);text-align:center" id="search-empty" hidden>
+        <span data-i18n="ru">→ ничего не найдено. попробуй другое слово.</span>
+        <span data-i18n="en">→ no results. try another word.</span>
+      </p>
+    </section>
+
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- ═══════════════ TOPIC: K8S ═════════════════ -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="screen" data-screen="topic-kubernetes">
+
+    <p class="crumb-bar">
+      <a href="#home" data-nav="home">edu</a>
+      <span class="sep">/</span>
+      <a href="#topics" data-nav="home">devops</a>
+      <span class="sep">/</span>
+      <span class="cur">kubernetes</span>
+    </p>
+
+    <header class="topic-head">
+      <h1 data-i18n="ru"><span class="hash">#</span><em>Kubernetes</em></h1>
+      <h1 data-i18n="en"><span class="hash">#</span><em>Kubernetes</em></h1>
+      <p class="sub" data-i18n="ru">От подов до Ingress: оркестрация контейнеров на проде. Декларативно, эфемерно, масштабируемо.</p>
+      <p class="sub" data-i18n="en">From pods to Ingress: container orchestration in prod. Declarative, ephemeral, scalable.</p>
+    </header>
+
+    <h2 class="eb"><span data-i18n="ru">аналогия</span><span data-i18n="en">analogy</span></h2>
+    <aside class="analogy">
+      <span class="label" data-i18n="ru">💡 представь</span><span class="label" data-i18n="en">💡 imagine</span>
+      <div class="bulb">💡</div>
+      <div class="body">
+        <span data-i18n="ru">Представь <b>дирижёра большого оркестра</b>: каждый музыкант — это контейнер, группа струнных — это под, партитура — это Deployment. Дирижёр сам не играет, но следит чтобы нужное число скрипок звучало в нужный момент, <em>и заменяет того кто сбился</em>.</span>
+        <span data-i18n="en">Imagine the <b>conductor of a large orchestra</b>: each musician is a container, the strings section is a pod, the score is a Deployment. The conductor doesn't play, but watches that the right number of violins sound at the right moment — <em>and replaces anyone who falls out of step</em>.</span>
+      </div>
+    </aside>
+
+    <h2 class="eb alt"><span data-i18n="ru">ключевые концепции</span><span data-i18n="en">key concepts</span></h2>
+    <div class="concept-grid">
+      <article class="concept c-1">
+        <span class="badge">Pod</span>
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+        <h3>Pod</h3>
+        <p data-i18n="ru">Минимальная единица: один или несколько контейнеров с общей сетью и томами.</p>
+        <p data-i18n="en">Minimal unit: one or more containers sharing network and volumes.</p>
+      </article>
+      <article class="concept c-2">
+        <span class="badge">Deployment</span>
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span>
+        <h3>Deployment</h3>
+        <p data-i18n="ru">Декларативное описание желаемого состояния: «всегда 3 пода, такие-то».</p>
+        <p data-i18n="en">Declarative description of desired state: "always 3 pods, like this".</p>
+      </article>
+      <article class="concept c-3">
+        <span class="badge">Service</span>
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M3 12h4M17 12h4M12 3v4M12 17v4"/></svg></span>
+        <h3>Service</h3>
+        <p data-i18n="ru">Стабильная точка входа к подам — даже когда сами поды пересоздаются.</p>
+        <p data-i18n="en">Stable entry point to pods — even when pods themselves get recreated.</p>
+      </article>
+      <article class="concept c-4">
+        <span class="badge">Ingress</span>
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span>
+        <h3>Ingress</h3>
+        <p data-i18n="ru">HTTP-роутинг снаружи внутрь: host/path → нужный Service.</p>
+        <p data-i18n="en">HTTP routing from outside in: host/path → the right Service.</p>
+      </article>
+      <article class="concept c-5">
+        <span class="badge">★ <span data-i18n="ru">креды</span><span data-i18n="en">creds</span></span>
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+        <h3>ConfigMap / Secret</h3>
+        <p data-i18n="ru">Конфиги и креды отдельно от образа — монтируются как env или файлы.</p>
+        <p data-i18n="en">Configs and credentials separate from the image — mounted as env vars or files.</p>
+      </article>
+      <article class="concept c-6">
+        <span class="badge">scale</span>
+        <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0"/><path d="M12 7v5l3 2"/></svg></span>
+        <h3>HPA</h3>
+        <p data-i18n="ru">Авто-масштабирование подов по CPU/памяти или кастомным метрикам.</p>
+        <p data-i18n="en">Pod auto-scaling by CPU/memory or custom metrics.</p>
+      </article>
+    </div>
+
+    <h2 class="eb b"><span data-i18n="ru">примеры</span><span data-i18n="en">examples</span></h2>
+
+    <div class="code-label"><span>deployment.yaml</span><span class="lang">YAML</span></div>
+    <div class="code">
+<pre><span class="k">apiVersion</span>: apps/v1
+<span class="k">kind</span>: Deployment
+<span class="k">metadata</span>:
+  <span class="k">name</span>: <span class="s">web</span>
+<span class="k">spec</span>:
+  <span class="k">replicas</span>: <span class="n">3</span>
+  <span class="k">selector</span>:
+    <span class="k">matchLabels</span>: { <span class="k">app</span>: <span class="s">web</span> }
+  <span class="k">template</span>:
+    <span class="k">metadata</span>:
+      <span class="k">labels</span>: { <span class="k">app</span>: <span class="s">web</span> }
+    <span class="k">spec</span>:
+      <span class="k">containers</span>:
+        - <span class="k">name</span>: <span class="s">web</span>
+          <span class="k">image</span>: <span class="s">ghcr.io/me/web:1.4.2</span>
+          <span class="k">ports</span>: [{ <span class="k">containerPort</span>: <span class="n">8080</span> }]
+          <span class="k">resources</span>:
+            <span class="k">requests</span>: { <span class="k">cpu</span>: <span class="s">100m</span>, <span class="k">memory</span>: <span class="s">128Mi</span> }
+            <span class="k">limits</span>:   { <span class="k">cpu</span>: <span class="s">500m</span>, <span class="k">memory</span>: <span class="s">512Mi</span> }</pre>
+      <button class="copy" data-copy-pre>copy</button>
+    </div>
+
+    <div class="code-label"><span data-i18n="ru">рaскатка &amp; статус</span><span data-i18n="en">rollout &amp; status</span><span class="lang">BASH</span></div>
+    <div class="code">
+<pre><span class="c"># применить и подождать раскатку</span>
+<span class="p">$</span> kubectl apply <span class="s">-f</span> deployment.yaml
+<span class="p">$</span> kubectl rollout status deployment/web --timeout=<span class="n">2m</span>
+
+<span class="c"># откатить если что-то пошло не так</span>
+<span class="p">$</span> kubectl rollout undo deployment/web
+
+<span class="c"># потыкать поды живьём</span>
+<span class="p">$</span> kubectl get pods <span class="s">-l</span> app=web <span class="s">-o</span> wide
+<span class="p">$</span> kubectl logs <span class="s">-f</span> <span class="s">-l</span> app=web --tail=<span class="n">100</span>
+<span class="p">$</span> kubectl exec <span class="s">-it</span> <span class="s">$(</span>kubectl get pod <span class="s">-l</span> app=web <span class="s">-o</span> name <span class="s">|</span> head <span class="s">-1)</span> -- sh</pre>
+      <button class="copy" data-copy-pre>copy</button>
+    </div>
+
+    <h2 class="eb y"><span data-i18n="ru">проверь себя</span><span data-i18n="en">check yourself</span></h2>
+    <div class="quiz" data-quiz>
+      <span class="label">quiz · 01</span>
+      <p class="q" data-i18n="ru">Под перезапустился. Почему его IP-адрес теперь другой?</p>
+      <p class="q" data-i18n="en">A pod was restarted. Why does it now have a different IP?</p>
+      <div class="options">
+        <button class="opt" data-letter="A" data-correct="false">
+          <span data-i18n="ru">Потому что Kubernetes специально меняет IP каждые N секунд для безопасности.</span>
+          <span data-i18n="en">Because Kubernetes deliberately rotates IPs every N seconds for security.</span>
+        </button>
+        <button class="opt" data-letter="B" data-correct="true">
+          <span data-i18n="ru">Под — эфемерная сущность; новый под получает новый IP. За стабильный адрес отвечает Service.</span>
+          <span data-i18n="en">A pod is ephemeral; a new pod gets a new IP. The Service is what provides a stable address.</span>
+        </button>
+        <button class="opt" data-letter="C" data-correct="false">
+          <span data-i18n="ru">Это баг CNI-плагина, нужно перезапустить kubelet.</span>
+          <span data-i18n="en">It's a CNI plugin bug, restart kubelet.</span>
+        </button>
+      </div>
+      <div class="explain" hidden>
+        <span class="ico">→</span>
+        <span>
+          <span data-i18n="ru">Pod-уровень IP не гарантируется. Поэтому клиенты ходят через <code>Service</code> (стабильный DNS-имя + ClusterIP), а сам Service следит за актуальным набором подов через label-селектор. Никакой ротации «для безопасности» нет — это просто свойство эфемерности.</span>
+          <span data-i18n="en">Pod-level IPs aren't guaranteed. That's why clients go through a <code>Service</code> (stable DNS name + ClusterIP), and the Service tracks the current pod set via a label selector. There's no "rotation for security" — it's just ephemerality.</span>
+        </span>
+      </div>
+    </div>
+
+    <nav class="prevnext">
+      <a class="prev" href="#topic-terraform" data-nav="topic-terraform">
+        <span class="label">← <span data-i18n="ru">предыдущая</span><span data-i18n="en">previous</span></span>
+        <span class="title"><span class="hash">#</span>Terraform</span>
+      </a>
+      <a class="next" href="#topic-networks" data-nav="topic-networks">
+        <span class="label"><span data-i18n="ru">следующая</span><span data-i18n="en">next</span> →</span>
+        <span class="title"><span class="hash">#</span><span data-i18n="ru">Сети</span><span data-i18n="en">Networks</span></span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- ════════ TOPIC: ANSIBLE & DOCKER ═══════════ -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="screen" data-screen="topic-ansible">
+    <p class="crumb-bar"><a href="#home" data-nav="home">edu</a><span class="sep">/</span><a href="#topics" data-nav="home">devops</a><span class="sep">/</span><span class="cur">ansible &amp; docker</span></p>
+    <header class="topic-head">
+      <h1><span class="hash">#</span><em>Ansible &amp; Docker</em></h1>
+      <p class="sub" data-i18n="ru">Конфигурация и упаковка. Idempotent playbook + immutable image — это два слоя одной идеи: «опиши состояние, не последовательность шагов».</p>
+      <p class="sub" data-i18n="en">Configuration and packaging. Idempotent playbook + immutable image — two layers of the same idea: "describe state, not a sequence of steps".</p>
+    </header>
+
+    <h2 class="eb"><span data-i18n="ru">аналогия</span><span data-i18n="en">analogy</span></h2>
+    <aside class="analogy">
+      <span class="label">💡</span>
+      <div class="bulb">💡</div>
+      <div class="body">
+        <span data-i18n="ru"><b>Ansible</b> — это рецепт для общей кухни (хост уже стоит, нужно довести до нужного состояния). <b>Docker</b> — это запечатанный TV-dinner: внутри уже всё нужное, разогрел и работает.</span>
+        <span data-i18n="en"><b>Ansible</b> is a recipe for a shared kitchen (the host already exists, bring it to a known state). <b>Docker</b> is a shrink-wrapped TV-dinner: everything is inside, heat it up, done.</span>
+      </div>
+    </aside>
+
+    <div class="coming-soon" style="margin-top:36px">
+      <h3 data-i18n="ru">Полный конспект — в работе</h3>
+      <h3 data-i18n="en">Full chapter — in progress</h3>
+      <p data-i18n="ru">Концепции, команды и квиз для этой темы появятся в ближайшем обновлении. Пока — смотри пример темы про Kubernetes, формат тот же.</p>
+      <p data-i18n="en">Concepts, commands and quiz for this topic land in the next update. For now — see the Kubernetes example, same format.</p>
+      <a class="cta" href="#topic-kubernetes" data-nav="topic-kubernetes">→ <span data-i18n="ru">смотреть пример темы</span><span data-i18n="en">see example topic</span></a>
+    </div>
+
+    <nav class="prevnext">
+      <a class="prev" href="#home" data-nav="home"><span class="label">← <span data-i18n="ru">все темы</span><span data-i18n="en">all topics</span></span><span class="title"><span data-i18n="ru">домой</span><span data-i18n="en">home</span></span></a>
+      <a class="next" href="#topic-terraform" data-nav="topic-terraform"><span class="label"><span data-i18n="ru">следующая</span><span data-i18n="en">next</span> →</span><span class="title"><span class="hash">#</span>Terraform</span></a>
+    </nav>
+  </div>
+
+  <!-- TOPIC: TERRAFORM -->
+  <div class="screen" data-screen="topic-terraform">
+    <p class="crumb-bar"><a href="#home" data-nav="home">edu</a><span class="sep">/</span><a href="#topics" data-nav="home">devops</a><span class="sep">/</span><span class="cur">terraform</span></p>
+    <header class="topic-head">
+      <h1><span class="hash">#</span><em>Terraform</em></h1>
+      <p class="sub" data-i18n="ru">Инфраструктура как код. State, plan, apply, drift — и почему state-файл нельзя терять.</p>
+      <p class="sub" data-i18n="en">Infrastructure as code. State, plan, apply, drift — and why you must not lose the state file.</p>
+    </header>
+    <h2 class="eb"><span data-i18n="ru">аналогия</span><span data-i18n="en">analogy</span></h2>
+    <aside class="analogy">
+      <span class="label">💡</span>
+      <div class="bulb">📐</div>
+      <div class="body">
+        <span data-i18n="ru"><b>Terraform</b> — это <b>чертёж дома</b>. State — это «фотография уже построенного». Plan показывает разницу. Apply вызывает строителей. Drift — это когда сосед поставил тебе новую дверь без спроса.</span>
+        <span data-i18n="en"><b>Terraform</b> is a <b>house blueprint</b>. State is a "photo of what's already built". Plan shows the diff. Apply calls the builders. Drift is the neighbour installing a new door without asking.</span>
+      </div>
+    </aside>
+    <div class="coming-soon" style="margin-top:36px">
+      <h3 data-i18n="ru">Полный конспект — в работе</h3><h3 data-i18n="en">Full chapter — in progress</h3>
+      <p data-i18n="ru">Раздел в работе. Смотри пример темы.</p>
+      <p data-i18n="en">In progress. See the example topic.</p>
+      <a class="cta" href="#topic-kubernetes" data-nav="topic-kubernetes">→ <span data-i18n="ru">пример темы</span><span data-i18n="en">example topic</span></a>
+    </div>
+    <nav class="prevnext">
+      <a class="prev" href="#topic-ansible" data-nav="topic-ansible"><span class="label">← prev</span><span class="title"><span class="hash">#</span>Ansible &amp; Docker</span></a>
+      <a class="next" href="#topic-kubernetes" data-nav="topic-kubernetes"><span class="label">next →</span><span class="title"><span class="hash">#</span>Kubernetes</span></a>
+    </nav>
+  </div>
+
+  <!-- TOPIC: NETWORKS -->
+  <div class="screen" data-screen="topic-networks">
+    <p class="crumb-bar"><a href="#home" data-nav="home">edu</a><span class="sep">/</span><a href="#topics" data-nav="home">devops</a><span class="sep">/</span><span class="cur"><span data-i18n="ru">сети</span><span data-i18n="en">networks</span></span></p>
+    <header class="topic-head">
+      <h1><span class="hash">#</span><em><span data-i18n="ru">Сети</span><span data-i18n="en">Networks</span></em></h1>
+      <p class="sub" data-i18n="ru">OSI, маршрутизация, DNS. Где находится пакет, и зачем там столько слоёв.</p>
+      <p class="sub" data-i18n="en">OSI, routing, DNS. Where the packet is, and why there are so many layers.</p>
+    </header>
+    <h2 class="eb"><span data-i18n="ru">аналогия</span><span data-i18n="en">analogy</span></h2>
+    <aside class="analogy">
+      <span class="label">💡</span>
+      <div class="bulb">📦</div>
+      <div class="body">
+        <span data-i18n="ru"><b>Пакет</b> — это <b>посылка в матрёшке</b>: Ethernet кадр обёртывает IP пакет, тот обёртывает TCP сегмент, тот — твой HTTP запрос. Каждый слой умеет одно и доверяет соседним.</span>
+        <span data-i18n="en">A <b>packet</b> is a <b>nested parcel</b>: an Ethernet frame wraps an IP packet, which wraps a TCP segment, which wraps your HTTP request. Each layer does one thing and trusts the neighbours.</span>
+      </div>
+    </aside>
+    <div class="coming-soon" style="margin-top:36px">
+      <h3 data-i18n="ru">Полный конспект — в работе</h3><h3 data-i18n="en">Full chapter — in progress</h3>
+      <p data-i18n="ru">Раздел в работе.</p><p data-i18n="en">In progress.</p>
+      <a class="cta" href="#topic-kubernetes" data-nav="topic-kubernetes">→ <span data-i18n="ru">пример темы</span><span data-i18n="en">example topic</span></a>
+    </div>
+    <nav class="prevnext">
+      <a class="prev" href="#topic-kubernetes" data-nav="topic-kubernetes"><span class="label">← prev</span><span class="title"><span class="hash">#</span>Kubernetes</span></a>
+      <a class="next" href="#topic-tls" data-nav="topic-tls"><span class="label">next →</span><span class="title"><span class="hash">#</span>TLS</span></a>
+    </nav>
+  </div>
+
+  <!-- TOPIC: TLS -->
+  <div class="screen" data-screen="topic-tls">
+    <p class="crumb-bar"><a href="#home" data-nav="home">edu</a><span class="sep">/</span><a href="#topics" data-nav="home">devops</a><span class="sep">/</span><span class="cur">tls</span></p>
+    <header class="topic-head">
+      <h1><span class="hash">#</span><em>TLS</em></h1>
+      <p class="sub" data-i18n="ru">Рукопожатие, сертификаты, mTLS. Кто кого подписывает и зачем.</p>
+      <p class="sub" data-i18n="en">Handshake, certificates, mTLS. Who signs whom and why.</p>
+    </header>
+    <h2 class="eb"><span data-i18n="ru">аналогия</span><span data-i18n="en">analogy</span></h2>
+    <aside class="analogy">
+      <span class="label">💡</span>
+      <div class="bulb">🛂</div>
+      <div class="body">
+        <span data-i18n="ru"><b>Сертификат</b> — это <b>паспорт</b>. Центр сертификации — это <b>паспортный стол</b>, которому ты доверяешь. Рукопожатие — это пограничный пункт: показал паспорт, договорились про общий язык, дальше говорите шёпотом.</span>
+        <span data-i18n="en">A <b>certificate</b> is a <b>passport</b>. The CA is the <b>passport office</b> you trust. The handshake is border control: show the passport, agree on a shared language, then whisper.</span>
+      </div>
+    </aside>
+    <div class="coming-soon" style="margin-top:36px">
+      <h3 data-i18n="ru">Полный конспект — в работе</h3><h3 data-i18n="en">Full chapter — in progress</h3>
+      <p data-i18n="ru">Раздел в работе.</p><p data-i18n="en">In progress.</p>
+      <a class="cta" href="#topic-kubernetes" data-nav="topic-kubernetes">→ <span data-i18n="ru">пример темы</span><span data-i18n="en">example topic</span></a>
+    </div>
+    <nav class="prevnext">
+      <a class="prev" href="#topic-networks" data-nav="topic-networks"><span class="label">← prev</span><span class="title"><span class="hash">#</span><span data-i18n="ru">Сети</span><span data-i18n="en">Networks</span></span></a>
+      <a class="next" href="#topic-postgres" data-nav="topic-postgres"><span class="label">next →</span><span class="title"><span class="hash">#</span>PostgreSQL</span></a>
+    </nav>
+  </div>
+
+  <!-- TOPIC: POSTGRES -->
+  <div class="screen" data-screen="topic-postgres">
+    <p class="crumb-bar"><a href="#home" data-nav="home">edu</a><span class="sep">/</span><a href="#topics" data-nav="home">devops</a><span class="sep">/</span><span class="cur">postgresql</span></p>
+    <header class="topic-head">
+      <h1><span class="hash">#</span><em>PostgreSQL</em></h1>
+      <p class="sub" data-i18n="ru">Индексы, MVCC, репликация. Что такое vacuum и почему он важен.</p>
+      <p class="sub" data-i18n="en">Indexes, MVCC, replication. What vacuum is and why it matters.</p>
+    </header>
+    <h2 class="eb"><span data-i18n="ru">аналогия</span><span data-i18n="en">analogy</span></h2>
+    <aside class="analogy">
+      <span class="label">💡</span>
+      <div class="bulb">📚</div>
+      <div class="body">
+        <span data-i18n="ru"><b>MVCC</b> — это <b>библиотека с черновиками</b>: каждая транзакция читает свой снимок мира. Новая запись = новая страница. Удалить — это пометить «не актуально». <b>Vacuum</b> — это уборщица, которая выносит вычеркнутые страницы.</span>
+        <span data-i18n="en"><b>MVCC</b> is a <b>library with drafts</b>: each transaction reads its own snapshot of the world. A new write = a new page. Delete = mark "obsolete". <b>Vacuum</b> is the cleaner who takes out the crossed-out pages.</span>
+      </div>
+    </aside>
+    <div class="coming-soon" style="margin-top:36px">
+      <h3 data-i18n="ru">Полный конспект — в работе</h3><h3 data-i18n="en">Full chapter — in progress</h3>
+      <p data-i18n="ru">Раздел в работе.</p><p data-i18n="en">In progress.</p>
+      <a class="cta" href="#topic-kubernetes" data-nav="topic-kubernetes">→ <span data-i18n="ru">пример темы</span><span data-i18n="en">example topic</span></a>
+    </div>
+    <nav class="prevnext">
+      <a class="prev" href="#topic-tls" data-nav="topic-tls"><span class="label">← prev</span><span class="title"><span class="hash">#</span>TLS</span></a>
+      <a class="next" href="#topic-mongo" data-nav="topic-mongo"><span class="label">next →</span><span class="title"><span class="hash">#</span>MongoDB</span></a>
+    </nav>
+  </div>
+
+  <!-- TOPIC: MONGO -->
+  <div class="screen" data-screen="topic-mongo">
+    <p class="crumb-bar"><a href="#home" data-nav="home">edu</a><span class="sep">/</span><a href="#topics" data-nav="home">devops</a><span class="sep">/</span><span class="cur">mongodb</span></p>
+    <header class="topic-head">
+      <h1><span class="hash">#</span><em>MongoDB</em></h1>
+      <p class="sub" data-i18n="ru">Схема (несмотря на лозунги), шардинг, индексы.</p>
+      <p class="sub" data-i18n="en">Schema (despite slogans), sharding, indexes.</p>
+    </header>
+    <h2 class="eb"><span data-i18n="ru">аналогия</span><span data-i18n="en">analogy</span></h2>
+    <aside class="analogy">
+      <span class="label">💡</span>
+      <div class="bulb">📂</div>
+      <div class="body">
+        <span data-i18n="ru"><b>«Без схемы»</b> — это маркетинг. Реальность: <b>схема всё равно есть</b>, только она в коде клиента. Mongo гибко принимает документы, но шарду нужен <em>shard key</em>, и плохой ключ — это плохая база до конца жизни.</span>
+        <span data-i18n="en"><b>"Schemaless"</b> is marketing. Reality: <b>there is still a schema</b>, just in the client. Mongo flexibly accepts documents, but a shard needs a <em>shard key</em>, and a bad key is a bad database for life.</span>
+      </div>
+    </aside>
+    <div class="coming-soon" style="margin-top:36px">
+      <h3 data-i18n="ru">Полный конспект — в работе</h3><h3 data-i18n="en">Full chapter — in progress</h3>
+      <p data-i18n="ru">Раздел в работе.</p><p data-i18n="en">In progress.</p>
+      <a class="cta" href="#topic-kubernetes" data-nav="topic-kubernetes">→ <span data-i18n="ru">пример темы</span><span data-i18n="en">example topic</span></a>
+    </div>
+    <nav class="prevnext">
+      <a class="prev" href="#topic-postgres" data-nav="topic-postgres"><span class="label">← prev</span><span class="title"><span class="hash">#</span>PostgreSQL</span></a>
+      <a class="next" href="#topic-elk" data-nav="topic-elk"><span class="label">next →</span><span class="title"><span class="hash">#</span>ELK</span></a>
+    </nav>
+  </div>
+
+  <!-- TOPIC: ELK -->
+  <div class="screen" data-screen="topic-elk">
+    <p class="crumb-bar"><a href="#home" data-nav="home">edu</a><span class="sep">/</span><a href="#topics" data-nav="home">devops</a><span class="sep">/</span><span class="cur">elk</span></p>
+    <header class="topic-head">
+      <h1><span class="hash">#</span><em>ELK</em></h1>
+      <p class="sub" data-i18n="ru">Индексация, шарды, retention. И почему логи дороже, чем кажутся.</p>
+      <p class="sub" data-i18n="en">Indexing, shards, retention. And why logs are more expensive than they look.</p>
+    </header>
+    <h2 class="eb"><span data-i18n="ru">аналогия</span><span data-i18n="en">analogy</span></h2>
+    <aside class="analogy">
+      <span class="label">💡</span>
+      <div class="bulb">📇</div>
+      <div class="body">
+        <span data-i18n="ru"><b>Elasticsearch</b> — это <b>картотека</b>: каждый лог разбирается на слова, каждое слово получает карточку с указанием «вот в каких документах оно встречается». Поиск — пошёл по картотеке, нашёл документы. Шард — отдельный шкаф с картотекой.</span>
+        <span data-i18n="en"><b>Elasticsearch</b> is a <b>card catalog</b>: each log is broken into words, each word gets a card listing "the documents I appear in". Search = walk the catalog, find the documents. A shard is one cabinet of cards.</span>
+      </div>
+    </aside>
+    <div class="coming-soon" style="margin-top:36px">
+      <h3 data-i18n="ru">Полный конспект — в работе</h3><h3 data-i18n="en">Full chapter — in progress</h3>
+      <p data-i18n="ru">Раздел в работе.</p><p data-i18n="en">In progress.</p>
+      <a class="cta" href="#topic-kubernetes" data-nav="topic-kubernetes">→ <span data-i18n="ru">пример темы</span><span data-i18n="en">example topic</span></a>
+    </div>
+    <nav class="prevnext">
+      <a class="prev" href="#topic-mongo" data-nav="topic-mongo"><span class="label">← prev</span><span class="title"><span class="hash">#</span>MongoDB</span></a>
+      <a class="next last" href="#home" data-nav="home"><span class="label"><span data-i18n="ru">все темы</span><span data-i18n="en">all topics</span> →</span><span class="title"><span data-i18n="ru">домой</span><span data-i18n="en">home</span></span></a>
+    </nav>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <footer class="bigfoot">
+    <div class="huge">
+      edu<br>
+      <span class="pop">.ninitux</span><br>
+      <span class="yel" data-i18n="ru">шпаргалка</span><span class="yel" data-i18n="en">cheatsheet</span>
+    </div>
+    <div class="cols">
+      <div>
+        <h5><span data-i18n="ru">часть сети</span><span data-i18n="en">part of</span></h5>
+        <p><a href="main.html">ninitux.com</a></p>
+        <p><a href="https://docs.ninitux.com">docs.ninitux.com</a></p>
+        <p><a href="https://md.ninitux.com">md.ninitux.com</a></p>
+      </div>
+      <div>
+        <h5><span data-i18n="ru">код</span><span data-i18n="en">source</span></h5>
+        <p><a href="https://github.com/PavelLizunov" target="_blank">github.com/PavelLizunov</a></p>
+        <p style="color:rgba(255,255,255,0.6)">MIT · open</p>
+      </div>
+      <div>
+        <h5><span data-i18n="ru">формат</span><span data-i18n="en">format</span></h5>
+        <p data-i18n="ru">аналогия → концепции</p>
+        <p data-i18n="en">analogy → concepts</p>
+        <p data-i18n="ru">→ команды → квиз</p>
+        <p data-i18n="en">→ commands → quiz</p>
+      </div>
+      <div>
+        <h5><span data-i18n="ru">автор</span><span data-i18n="en">maintainer</span></h5>
+        <p>P. Lizunov</p>
+        <p><a href="https://t.me/ninitux_auth_bot">@ninitux</a></p>
+      </div>
+    </div>
+    <div class="legal">
+      <span>© 2026 edu.ninitux.com</span>
+      <span>·</span>
+      <span data-i18n="ru">часть ninitux.com · без cookies · без трекеров</span>
+      <span data-i18n="en">part of ninitux.com · no cookies · no trackers</span>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  const root = document.documentElement;
+
+  // ── language
+  function setLang(l){
+    root.setAttribute('data-lang', l);
+    root.setAttribute('lang', l);
+    document.querySelectorAll('.topbar .seg button[data-lang]').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === l ? 'true' : 'false'));
+    try { localStorage.setItem('edu_lang', l); } catch(e){}
+  }
+  document.querySelectorAll('.topbar .seg button[data-lang]').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+  let savedLang = null; try { savedLang = localStorage.getItem('edu_lang'); } catch(e){}
+  setLang(savedLang || (((navigator.language||'').toLowerCase().startsWith('ru')) ? 'ru' : 'en'));
+
+  // ── sticky header shadow
+  const topbar = document.getElementById('topbar');
+  window.addEventListener('scroll', () => {
+    topbar.classList.toggle('scrolled', window.scrollY > 12);
+  });
+
+  // ── screen routing
+  const screens = document.querySelectorAll('.screen');
+  function showScreen(name){
+    let found = false;
+    screens.forEach(s => {
+      const match = s.dataset.screen === name;
+      s.classList.toggle('active', match);
+      if (match) found = true;
+    });
+    if (!found){
+      document.querySelector('.screen[data-screen="home"]').classList.add('active');
+    }
+    // close mobile drawer
+    document.getElementById('mobile-drawer').classList.remove('show');
+    // scroll up nicely
+    window.scrollTo({top:0, behavior:'instant'});
+    // update active in drawer
+    document.querySelectorAll('.mobile-drawer .panel a[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === name));
+  }
+  function routeFromHash(){
+    const h = (location.hash || '').replace(/^#/, '');
+    if (!h || h === 'home' || h === 'cats' || h === 'topics'){
+      showScreen('home');
+      if (h && h !== 'home'){
+        // scroll to anchor inside home
+        setTimeout(() => {
+          const el = document.getElementById(h);
+          if (el) el.scrollIntoView({behavior:'instant', block:'start'});
+        }, 0);
+      }
+      return;
+    }
+    if (h.startsWith('topic-')){
+      showScreen(h);
+      return;
+    }
+    showScreen('home');
+  }
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[data-nav]');
+    if (!a) return;
+    e.preventDefault();
+    const target = a.dataset.nav;
+    if (target === 'home'){
+      history.pushState(null, '', '#home');
+    } else {
+      history.pushState(null, '', '#' + target);
+    }
+    routeFromHash();
+  });
+  window.addEventListener('hashchange', routeFromHash);
+  routeFromHash();
+
+  // ── copy buttons (data-copy)
+  document.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const text = btn.dataset.copy;
+      try { await navigator.clipboard.writeText(text); }
+      catch(e){
+        const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select();
+        try{ document.execCommand('copy'); }catch(_){} ta.remove();
+      }
+      const orig = btn.textContent;
+      btn.textContent = root.getAttribute('data-lang') === 'ru' ? '✓ скопир.' : '✓ ok';
+      btn.classList.add('ok');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1200);
+    });
+  });
+  // ── copy <pre> contents
+  document.querySelectorAll('[data-copy-pre]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const pre = btn.parentElement.querySelector('pre');
+      if (!pre) return;
+      const text = pre.innerText;
+      try { await navigator.clipboard.writeText(text); }
+      catch(e){
+        const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select();
+        try{ document.execCommand('copy'); }catch(_){} ta.remove();
+      }
+      const orig = btn.textContent;
+      btn.textContent = root.getAttribute('data-lang') === 'ru' ? '✓ скопир.' : '✓ ok';
+      btn.classList.add('ok');
+      setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1200);
+    });
+  });
+
+  // ── quizzes
+  document.querySelectorAll('[data-quiz]').forEach(quiz => {
+    const opts = quiz.querySelectorAll('.opt');
+    const explain = quiz.querySelector('.explain');
+    opts.forEach(o => o.addEventListener('click', () => {
+      if (quiz.dataset.answered) return;
+      const correct = o.dataset.correct === 'true';
+      o.setAttribute('data-state', correct ? 'correct' : 'incorrect');
+      if (!correct){
+        const right = quiz.querySelector('.opt[data-correct="true"]');
+        if (right) right.setAttribute('data-state', 'correct');
+      }
+      opts.forEach(x => x.disabled = true);
+      if (explain) explain.hidden = false;
+      quiz.dataset.answered = '1';
+    }));
+  });
+
+  // ── topic search filter
+  const search = document.getElementById('topic-search');
+  const cards = document.querySelectorAll('.topic-card[data-search]');
+  const empty = document.getElementById('search-empty');
+  if (search){
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      let visible = 0;
+      cards.forEach(c => {
+        const hit = !q || c.dataset.search.includes(q);
+        c.dataset.hidden = hit ? '' : 'true';
+        if (hit) visible++;
+      });
+      empty.hidden = visible !== 0 || !q;
+      // ensure we're on home view
+      if (q && document.querySelector('.screen.active').dataset.screen !== 'home'){
+        history.pushState(null,'','#topics');
+        routeFromHash();
+      }
+    });
+  }
+
+  // ── mobile drawer
+  const md = document.getElementById('mobile-drawer');
+  document.getElementById('mobile-open').addEventListener('click', () => md.classList.add('show'));
+  document.getElementById('mobile-close').addEventListener('click', () => md.classList.remove('show'));
+  md.addEventListener('click', e => { if (e.target === md) md.classList.remove('show'); });
+})();
+</script>
+
+</body>
+</html>

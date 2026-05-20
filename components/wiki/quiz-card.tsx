@@ -5,17 +5,25 @@ import type { ReactNode } from "react";
 
 interface QuizCardProps {
   question: string;
-  /** 2-4 answer options, plain text */
+  /** 2-4 options as plain text */
   options: string[];
   /** 0-based index of the correct option */
   correct: number;
-  /** Shown after the user answers. Plain text or MDX nodes. */
+  /** Shown after answer; plain string or MDX */
   explanation: ReactNode;
+  /** Small badge sticker on top-right (e.g. "quiz · 01") */
+  label?: string;
 }
 
 const LETTERS = ["A", "B", "C", "D", "E"];
 
-export function QuizCard({ question, options, correct, explanation }: QuizCardProps) {
+export function QuizCard({
+  question,
+  options,
+  correct,
+  explanation,
+  label = "quiz · 01",
+}: QuizCardProps) {
   const [pickedIdx, setPickedIdx] = useState<number | null>(null);
 
   function onPick(idx: number) {
@@ -31,16 +39,20 @@ export function QuizCard({ question, options, correct, explanation }: QuizCardPr
   }
 
   return (
-    <div className="quiz" data-answered={pickedIdx !== null ? "1" : undefined}>
-      <p className="quiz-q">{question}</p>
-      <div className="quiz-options" role="radiogroup" aria-label="Варианты ответа">
+    <div
+      className="quiz"
+      data-answered={pickedIdx !== null ? "1" : undefined}
+    >
+      <span className="quiz-label">{label}</span>
+      <p className="q">{question}</p>
+      <div className="options" role="radiogroup" aria-label="Варианты ответа">
         {options.map((opt, idx) => {
           const state = stateOf(idx);
           return (
             <button
               key={idx}
               type="button"
-              className="quiz-opt"
+              className="opt"
               data-letter={LETTERS[idx] ?? String(idx + 1)}
               data-state={state}
               onClick={() => onPick(idx)}
@@ -53,8 +65,8 @@ export function QuizCard({ question, options, correct, explanation }: QuizCardPr
         })}
       </div>
       {pickedIdx !== null && (
-        <div className="quiz-explain" role="status">
-          <span className="icon" aria-hidden="true">
+        <div className="explain" role="status">
+          <span className="ico" aria-hidden="true">
             →
           </span>
           <div>{explanation}</div>

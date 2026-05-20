@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { compileMDX } from "next-mdx-remote/rsc";
 import {
@@ -7,8 +8,7 @@ import {
   getTopicSiblings,
 } from "@/lib/content";
 import { mdxComponents } from "@/lib/mdx-components";
-import { Breadcrumbs } from "@/components/navigation/breadcrumbs";
-import Link from "next/link";
+import { T } from "@/components/i18n/t";
 
 interface PageProps {
   params: Promise<{ category: string; slug: string }>;
@@ -18,7 +18,9 @@ export async function generateStaticParams() {
   return getAllTopicParams();
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { category, slug } = await params;
   const topic = await getTopic(category, slug);
   if (!topic) return {};
@@ -28,7 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     keywords: topic.tags,
     openGraph: {
       type: "article",
-      title: `${topic.title} — edu.ninitux`,
+      title: `${topic.title} ★ edu.ninitux`,
       description: topic.description,
       url: `https://edu.ninitux.com${topic.href}`,
       locale: "ru_RU",
@@ -49,10 +51,6 @@ export default async function TopicPage({ params }: PageProps) {
     components: mdxComponents,
     options: {
       parseFrontmatter: false,
-      mdxOptions: {
-        remarkPlugins: [],
-        rehypePlugins: [],
-      },
     },
   });
 
@@ -60,40 +58,68 @@ export default async function TopicPage({ params }: PageProps) {
 
   return (
     <>
-      <Breadcrumbs
-        items={[
-          { href: "/", label: "edu" },
-          { href: `/#${topic.category}`, label: topic.category },
-          { label: topic.slug },
-        ]}
-      />
+      <p className="crumb-bar">
+        <Link href="/">edu</Link>
+        <span className="sep">/</span>
+        <Link href={`/#${topic.category}`}>{topic.category}</Link>
+        <span className="sep">/</span>
+        <span className="cur">{topic.slug}</span>
+      </p>
 
-      <h1 className="topic-h1">
-        <span className="hash" aria-hidden="true">
-          #
-        </span>
-        {topic.title}
-      </h1>
-      {topic.description && <p className="topic-sub">{topic.description}</p>}
+      <header className="topic-head">
+        <h1>
+          <span className="hash" aria-hidden="true">
+            #
+          </span>
+          <em>{topic.title}</em>
+        </h1>
+        {topic.description && <p className="sub">{topic.description}</p>}
+      </header>
 
-      <article>{content}</article>
+      <article className="topic-body">{content}</article>
 
       {(siblings.prev || siblings.next) && (
-        <nav className="next-prev" aria-label="Соседние темы">
+        <nav className="prevnext" aria-label="Соседние темы">
           {siblings.prev ? (
             <Link href={siblings.prev.href} className="prev">
-              <span className="label">← предыдущая</span>
-              <span className="ttl">{siblings.prev.title}</span>
+              <span className="label">
+                ←&nbsp;<T ru="предыдущая" en="previous" />
+              </span>
+              <span className="title">
+                <span className="hash">#</span>
+                {siblings.prev.title}
+              </span>
             </Link>
           ) : (
-            <span />
+            <Link href="/" className="prev">
+              <span className="label">
+                ←&nbsp;<T ru="все темы" en="all topics" />
+              </span>
+              <span className="title">
+                <T ru="домой" en="home" />
+              </span>
+            </Link>
           )}
           {siblings.next ? (
             <Link href={siblings.next.href} className="next">
-              <span className="label">следующая →</span>
-              <span className="ttl">{siblings.next.title}</span>
+              <span className="label">
+                <T ru="следующая" en="next" />&nbsp;→
+              </span>
+              <span className="title">
+                <span className="hash">#</span>
+                {siblings.next.title}
+              </span>
             </Link>
-          ) : null}
+          ) : (
+            <Link href="/" className="next last">
+              <span className="label">
+                <T ru="все темы" en="all topics" />&nbsp;→
+              </span>
+              <span className="title">
+                <T ru="домой" en="home" />
+              </span>
+            </Link>
+          )}
         </nav>
       )}
     </>
