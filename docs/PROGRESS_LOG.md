@@ -13,4 +13,6 @@
 
 ## Iterations
 
-(пусто до запуска автономного цикла)
+[2026-05-20T18:45Z] setup | design-handoff: дизайн из claude.ai/design распакован в репо — токены, style paragraph и HTML-мок | gate: n/a | files: docs/DESIGN_TOKENS.md, docs/DESIGN_STYLE.md, docs/DESIGN_MOCKS/edu-ninitux-mock.html, docs/DESIGN_MOCKS/HANDOFF_README.md
+
+(дальше — после запуска автономного цикла)

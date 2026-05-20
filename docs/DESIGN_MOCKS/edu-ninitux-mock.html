@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>edu.ninitux — design mock</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🐧</text></svg>">
+<style>
+/* ─── Tokens (from docs/DESIGN_TOKENS.md) ─── */
+:root,
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --background:#070A14;
+  --foreground:#EEF1F6;
+  --card:#0F1320;
+  --card-foreground:#EEF1F6;
+  --popover:#1C2231;
+  --popover-foreground:#EEF1F6;
+  --primary:#38BDF8;
+  --primary-foreground:#070A14;
+  --secondary:#1C2231;
+  --secondary-foreground:#A6B0C2;
+  --muted:#0F1320;
+  --muted-foreground:#6C788F;
+  --accent:#67E8F9;
+  --accent-foreground:#070A14;
+  --accent-bg:rgba(56,189,248,0.10);
+  --accent-border:rgba(56,189,248,0.40);
+  --destructive:#EF4444;
+  --border:rgba(255,255,255,0.08);
+  --border-strong:rgba(255,255,255,0.16);
+  --ring:rgba(56,189,248,0.40);
+  --quiz-correct:rgba(34,197,94,0.15);
+  --quiz-correct-border:rgba(34,197,94,0.45);
+  --quiz-correct-fg:#4ADE80;
+  --quiz-incorrect:rgba(239,68,68,0.15);
+  --quiz-incorrect-border:rgba(239,68,68,0.45);
+  --quiz-incorrect-fg:#FCA5A5;
+  --code-bg:#1C2231;
+  --code-fg:#EEF1F6;
+  --code-gutter:#6C788F;
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --background:#FBFCFD;
+  --foreground:#0F1320;
+  --card:#FFFFFF;
+  --card-foreground:#0F1320;
+  --popover:#FFFFFF;
+  --popover-foreground:#0F1320;
+  --primary:#0284C7;
+  --primary-foreground:#FFFFFF;
+  --secondary:#EBEEF3;
+  --secondary-foreground:#475067;
+  --muted:#F5F7FA;
+  --muted-foreground:#475067;
+  --accent:#0369A1;
+  --accent-foreground:#FFFFFF;
+  --accent-bg:rgba(2,132,199,0.08);
+  --accent-border:rgba(2,132,199,0.35);
+  --destructive:#DC2626;
+  --border:rgba(15,19,32,0.08);
+  --border-strong:rgba(15,19,32,0.16);
+  --ring:rgba(2,132,199,0.30);
+  --quiz-correct:#DCFCE7;
+  --quiz-correct-border:#86EFAC;
+  --quiz-correct-fg:#15803D;
+  --quiz-incorrect:#FEE2E2;
+  --quiz-incorrect-border:#FCA5A5;
+  --quiz-incorrect-fg:#B91C1C;
+  --code-bg:#F5F7FA;
+  --code-fg:#0F1320;
+  --code-gutter:#94A0B2;
+}
+:root{
+  --font-sans: ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI Variable","Segoe UI",system-ui,"Helvetica Neue",Arial,sans-serif;
+  --font-mono: ui-monospace,"JetBrains Mono","SF Mono","Segoe UI Mono",Menlo,Consolas,monospace;
+  --radius:.5rem;
+  --radius-sm:.25rem;
+  --ease-out:cubic-bezier(.2,.8,.2,1);
+  --dur-fast:140ms;
+}
+
+/* ─── Base ─── */
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;padding:0;background:var(--background);color:var(--foreground);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+body{font-size:15px;line-height:1.65}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+code,pre,kbd{font-family:var(--font-mono)}
+::selection{background:var(--primary);color:var(--primary-foreground)}
+
+/* ─── Mock chrome (just to switch screens) ─── */
+.mock-bar{
+  position:sticky;top:0;z-index:100;
+  background:var(--background);border-bottom:1px solid var(--border);
+  padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  font-size:12px;color:var(--muted-foreground);font-family:var(--font-mono);
+}
+.mock-bar .mb-title{color:var(--foreground);font-weight:600}
+.mock-bar .mb-title::before{content:"# ";color:var(--primary);opacity:.7}
+.mock-bar .spacer{flex:1}
+.mock-bar button{
+  appearance:none;background:transparent;border:1px solid var(--border-strong);
+  color:var(--muted-foreground);font:inherit;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;
+  padding:5px 9px;border-radius:var(--radius-sm);cursor:pointer;
+}
+.mock-bar button[aria-pressed="true"]{background:var(--accent-bg);color:var(--primary);border-color:var(--accent-border)}
+.mock-bar button:hover{color:var(--foreground)}
+.mock-bar .group{display:inline-flex;gap:4px;padding:3px;border:1px solid var(--border);border-radius:var(--radius-sm)}
+.mock-bar .group button{border:0;height:24px;padding:0 8px}
+
+/* ─── Screens ─── */
+.screen{display:none}
+.screen.active{display:block}
+
+/* ─── App header (in-screen) ─── */
+.app-header{
+  border-bottom:1px solid var(--border);
+  padding:12px 24px;display:flex;align-items:center;gap:14px;
+  background:var(--background);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;font-family:var(--font-mono);color:var(--foreground);text-decoration:none}
+.brand .penguin{width:22px;height:22px;display:inline-block;background:var(--foreground);mask:radial-gradient(circle at 50% 38%,#000 30%,transparent 31%) no-repeat,radial-gradient(circle at 50% 70%,#000 40%,transparent 41%) no-repeat;mask-composite:add}
+/* simple emoji fallback for mock */
+.brand .penguin{background:none;font-size:18px;line-height:1;mask:none}
+.brand .penguin::before{content:"🐧"}
+.app-header .spacer{flex:1}
+.app-header .meta{font-size:12px;color:var(--muted-foreground);font-family:var(--font-mono)}
+
+/* ─── Layout w/ sidebar ─── */
+.layout{display:grid;grid-template-columns:280px 1fr;max-width:1280px;margin:0 auto;align-items:start}
+.sidebar{
+  position:sticky;top:0;align-self:start;
+  border-right:1px solid var(--border);
+  padding:22px 18px 40px;
+  font-size:14px;height:calc(100dvh - 0px);overflow-y:auto;
+}
+.sidebar h4{
+  font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted-foreground);margin:18px 0 6px;
+}
+.sidebar h4:first-child{margin-top:0}
+.sidebar h4::before{content:"# ";color:var(--primary);opacity:.7}
+.sidebar ul{list-style:none;padding:0;margin:0}
+.sidebar li{margin:0}
+.sidebar a{display:block;padding:4px 8px;border-radius:var(--radius-sm);color:var(--muted-foreground)}
+.sidebar a:hover{color:var(--foreground);background:var(--muted);text-decoration:none}
+.sidebar a[aria-current="page"]{
+  color:var(--foreground);background:var(--accent-bg);
+  border-left:2px solid var(--primary);padding-left:6px;
+}
+.sidebar a.disabled{color:var(--muted-foreground);opacity:.5;pointer-events:none}
+.sidebar a.disabled::after{content:" ⋯";font-family:var(--font-mono);font-size:11px}
+
+/* ─── Article container ─── */
+.article{max-width:768px;padding:36px 32px 80px;margin:0 auto;width:100%}
+
+/* ─── Section eyebrow ─── */
+.eyebrow{
+  font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted-foreground);margin:0 0 14px;
+}
+.eyebrow::before{content:"# ";color:var(--primary);opacity:.7}
+.subeyebrow{
+  font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted-foreground);margin:30px 0 12px;
+}
+.subeyebrow::before{content:"## ";color:var(--primary);opacity:.7}
+
+/* ─── Hero (home) ─── */
+.hero{padding:8px 0 0}
+.hero h1{font-size:36px;font-weight:700;letter-spacing:-0.02em;line-height:1.15;margin:0 0 12px;color:var(--foreground)}
+.hero p.lede{font-size:17px;line-height:1.55;color:var(--muted-foreground);max-width:60ch;margin:0}
+.hero p.lede b{color:var(--foreground);font-weight:500}
+.hero .stats{
+  margin-top:24px;display:flex;flex-wrap:wrap;gap:14px;font-family:var(--font-mono);
+  font-size:12.5px;color:var(--muted-foreground);
+}
+.hero .stats span b{color:var(--foreground);font-weight:600}
+
+/* ─── Category cards (home) ─── */
+.cat-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:640px){.cat-grid{grid-template-columns:repeat(3,1fr)}}
+.cat{
+  display:block;padding:18px;border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--card);transition:border-color var(--dur-fast) var(--ease-out);
+  text-decoration:none;color:inherit;
+}
+.cat:hover{border-color:var(--border-strong);text-decoration:none}
+.cat .head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.cat .ico{
+  width:28px;height:28px;border:1px solid var(--border);border-radius:var(--radius-sm);
+  display:inline-flex;align-items:center;justify-content:center;color:var(--muted-foreground);
+}
+.cat .ico svg{width:16px;height:16px}
+.cat .title{font-size:15px;font-weight:600;color:var(--foreground)}
+.cat .count{font-size:12px;color:var(--muted-foreground);font-family:var(--font-mono)}
+.cat[data-soon] .title{color:var(--muted-foreground)}
+.cat[data-soon]:hover{border-color:var(--border)}
+
+/* ─── Topic list (home) ─── */
+ul.topics{list-style:none;padding:0;margin:0;border-top:1px solid var(--border)}
+ul.topics li{border-bottom:1px solid var(--border)}
+ul.topics a{
+  display:flex;align-items:baseline;gap:14px;padding:12px 4px;
+  color:var(--foreground);font-size:15px;text-decoration:none;
+}
+ul.topics a:hover{background:var(--muted);text-decoration:none}
+ul.topics a::before{content:"▸";color:var(--primary);font-size:11px;line-height:1;width:14px;flex:0 0 14px;text-align:center}
+ul.topics .ttl{flex:1;min-width:0}
+ul.topics .ttl b{font-weight:500}
+ul.topics .meta{font-family:var(--font-mono);font-size:12px;color:var(--muted-foreground);white-space:nowrap}
+
+/* ─── Breadcrumb (topic) ─── */
+.crumb{font-family:var(--font-mono);font-size:12.5px;color:var(--muted-foreground);margin:0 0 18px}
+.crumb a{color:var(--muted-foreground)}
+.crumb a:hover{color:var(--foreground);text-decoration:none}
+.crumb .sep{color:var(--border-strong);margin:0 6px}
+
+/* ─── H1 on topic ─── */
+.topic-h1{font-size:30px;font-weight:700;letter-spacing:-0.02em;line-height:1.15;margin:0 0 10px;color:var(--foreground)}
+.topic-h1 .hash{color:var(--primary);opacity:.7;font-weight:400;margin-right:8px}
+.topic-sub{font-size:16px;color:var(--muted-foreground);margin:0 0 20px;line-height:1.55}
+
+/* ─── AnalogyBox ─── */
+.analogy{
+  display:grid;grid-template-columns:24px 1fr;gap:14px;
+  padding:16px 18px;background:var(--accent-bg);
+  border-left:3px solid var(--primary);border-radius:var(--radius);
+  margin:0 0 6px;
+}
+.analogy-mark{font-size:18px;line-height:1.2;opacity:.85}
+.analogy-body{font-size:17px;line-height:1.55;color:var(--foreground);margin:0}
+.analogy-body b{color:var(--foreground);font-weight:600}
+
+/* ─── ConceptCard grid ─── */
+.concept-grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:640px){.concept-grid{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1024px){.concept-grid{grid-template-columns:repeat(3,1fr)}}
+.concept{
+  padding:16px;border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--card);transition:border-color var(--dur-fast) var(--ease-out);
+}
+.concept:hover{border-color:var(--border-strong)}
+.concept-icon{width:22px;height:22px;color:var(--muted-foreground);margin-bottom:10px;display:block}
+.concept-title{font-size:15px;font-weight:600;margin:0 0 4px;color:var(--card-foreground)}
+.concept-desc{font-size:13.5px;color:var(--muted-foreground);margin:0;line-height:1.55}
+
+/* ─── CodeBlock ─── */
+.code-label{font-family:var(--font-mono);font-size:12px;color:var(--muted-foreground);margin:0 0 6px;display:flex;justify-content:space-between;align-items:baseline}
+.code-label .lang{color:var(--muted-foreground);opacity:.7}
+.code{
+  background:var(--code-bg);border:1px solid var(--border);
+  border-radius:var(--radius);display:flex;align-items:stretch;overflow:hidden;margin-bottom:12px;
+}
+.code pre{
+  margin:0;flex:1;padding:14px 16px;
+  font-family:var(--font-mono);font-size:13.5px;line-height:1.55;
+  color:var(--code-fg);overflow-x:auto;white-space:pre;
+}
+.code .copy{
+  appearance:none;background:transparent;border:0;border-left:1px solid var(--border);
+  color:var(--muted-foreground);padding:0 14px;cursor:pointer;
+  font:inherit;font-size:12px;
+  display:flex;align-items:center;gap:6px;min-width:74px;justify-content:center;
+}
+.code .copy:hover{color:var(--foreground);background:rgba(255,255,255,0.03)}
+:root[data-theme="light"] .code .copy:hover{background:rgba(15,19,32,0.04)}
+.code .copy.ok{color:var(--quiz-correct-fg)}
+/* simple syntax tokens for the demo */
+.code .k{color:#7DD3FC}.code .s{color:#86EFAC}.code .n{color:#FCD34D}.code .c{color:var(--muted-foreground)}
+
+/* ─── QuizCard ─── */
+.quiz{padding-block:6px 4px}
+.quiz-q{font-size:17px;font-weight:600;margin:0 0 12px;color:var(--foreground);line-height:1.4}
+.quiz-options{display:flex;flex-direction:column;gap:8px}
+.quiz-opt{
+  text-align:left;padding:11px 14px;
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--card);color:var(--card-foreground);
+  font:inherit;font-size:14.5px;cursor:pointer;
+  transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);
+  display:flex;align-items:baseline;gap:10px;
+}
+.quiz-opt::before{content:attr(data-letter);font-family:var(--font-mono);font-size:12px;color:var(--muted-foreground);width:14px;flex:0 0 14px}
+.quiz-opt:hover:not(:disabled){border-color:var(--border-strong)}
+.quiz-opt[data-state="correct"]{border-color:var(--quiz-correct-border);background:var(--quiz-correct)}
+.quiz-opt[data-state="correct"]::before{color:var(--quiz-correct-fg)}
+.quiz-opt[data-state="incorrect"]{border-color:var(--quiz-incorrect-border);background:var(--quiz-incorrect)}
+.quiz-opt[data-state="incorrect"]::before{color:var(--quiz-incorrect-fg)}
+.quiz-opt:disabled{cursor:default}
+.quiz-explain{
+  margin-top:12px;padding:12px 14px;
+  border:1px dashed var(--border-strong);border-radius:var(--radius);
+  font-size:13.5px;color:var(--muted-foreground);line-height:1.55;
+  display:grid;grid-template-columns:18px 1fr;gap:10px;
+}
+.quiz-explain .icon{color:var(--primary);font-family:var(--font-mono);line-height:1.5}
+
+/* ─── Topic footer nav ─── */
+.next-prev{
+  margin-top:32px;padding-top:18px;border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;gap:16px;font-size:14px;
+}
+.next-prev a{color:var(--muted-foreground);text-decoration:none;display:inline-flex;flex-direction:column;gap:2px}
+.next-prev a:hover{color:var(--foreground)}
+.next-prev a .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-family:var(--font-mono);opacity:.8}
+.next-prev a .ttl{font-weight:500;color:var(--foreground)}
+.next-prev a.next{text-align:right;margin-left:auto}
+
+/* ─── Mobile screen frame ─── */
+.mobile-frame{
+  width:390px;height:780px;margin:36px auto;
+  border:1px solid var(--border-strong);border-radius:32px;
+  overflow:hidden;display:flex;flex-direction:column;background:var(--background);
+  box-shadow:0 30px 80px rgba(0,0,0,.45);position:relative;
+}
+.mobile-frame .status{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px 24px 6px;font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground);
+}
+.mobile-frame .status .dots{display:flex;gap:3px}.mobile-frame .status .dots i{width:3px;height:3px;background:currentColor;border-radius:50%;display:block;opacity:.7}
+.mobile-frame .m-header{display:flex;align-items:center;gap:10px;padding:8px 16px 12px;border-bottom:1px solid var(--border)}
+.mobile-frame .m-content{flex:1;overflow-y:auto;padding:18px 18px 90px}
+.mobile-frame .m-bottom{
+  position:absolute;left:0;right:0;bottom:0;
+  display:grid;grid-template-columns:repeat(3,1fr);
+  background:var(--background);border-top:1px solid var(--border);
+  padding:8px 0 22px;
+}
+.mobile-frame .m-bottom a{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 4px;font-size:10px;color:var(--muted-foreground);text-decoration:none;
+  font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.04em;
+}
+.mobile-frame .m-bottom a[aria-current="page"]{color:var(--primary)}
+.mobile-frame .m-bottom svg{width:18px;height:18px}
+.mobile-frame .crumb{margin:0 0 12px}
+.mobile-frame .topic-h1{font-size:24px;margin-bottom:6px}
+.mobile-frame .analogy-body{font-size:15px}
+.mobile-frame .concept-grid{grid-template-columns:1fr}
+
+/* ─── Drawer (mobile menu open state) ─── */
+.drawer-bg{position:absolute;inset:0;background:rgba(7,10,20,0.55);backdrop-filter:blur(2px);z-index:5}
+:root[data-theme="light"] .drawer-bg{background:rgba(15,19,32,0.35)}
+.drawer{
+  position:absolute;left:0;top:0;bottom:0;width:78%;
+  background:var(--background);border-right:1px solid var(--border);
+  padding:20px 18px;z-index:6;overflow-y:auto;
+  box-shadow:8px 0 24px rgba(0,0,0,0.35);
+}
+.drawer-close{
+  position:absolute;top:12px;right:12px;
+  width:28px;height:28px;border:1px solid var(--border);background:transparent;
+  border-radius:var(--radius-sm);color:var(--muted-foreground);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Mock controls ─── -->
+<div class="mock-bar">
+  <span class="mb-title">edu.ninitux — design mock</span>
+  <div class="group" role="tablist" aria-label="Screen">
+    <button data-screen="home" aria-pressed="true">Home</button>
+    <button data-screen="topic" aria-pressed="false">Topic</button>
+    <button data-screen="mobile" aria-pressed="false">Mobile</button>
+  </div>
+  <span class="spacer"></span>
+  <div class="group" role="group" aria-label="Theme">
+    <button data-theme-set="dark" aria-pressed="true">Dark</button>
+    <button data-theme-set="light" aria-pressed="false">Light</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SCREEN 1: HOME
+   ════════════════════════════════════════════════════════════════════ -->
+<div class="screen active" data-screen="home">
+
+  <header class="app-header">
+    <a class="brand" href="#"><span class="penguin"></span><span>edu.ninitux</span></a>
+    <span class="spacer"></span>
+    <span class="meta">part of ninitux.com</span>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h4>edu</h4>
+      <ul>
+        <li><a href="#" aria-current="page">Главная</a></li>
+        <li><a href="#" class="disabled">Поиск</a></li>
+      </ul>
+      <h4>devops</h4>
+      <ul>
+        <li><a href="#topic">Ansible &amp; Docker</a></li>
+        <li><a href="#topic">Terraform</a></li>
+        <li><a href="#topic">Kubernetes</a></li>
+        <li><a href="#topic">Сети</a></li>
+        <li><a href="#topic">TLS</a></li>
+        <li><a href="#topic">PostgreSQL</a></li>
+        <li><a href="#topic">MongoDB</a></li>
+        <li><a href="#topic">ELK</a></li>
+      </ul>
+      <h4>databases</h4>
+      <ul><li><a href="#" class="disabled">скоро</a></li></ul>
+      <h4>backend</h4>
+      <ul><li><a href="#" class="disabled">скоро</a></li></ul>
+    </aside>
+
+    <main class="article">
+      <section class="hero">
+        <h1>Шпаргалка инженера<br>для подготовки к Middle+</h1>
+        <p class="lede">
+          Восемь DevOps-тем. <b>Аналогии → концепции → рабочие команды → проверка себя.</b>
+          Без воды, без маркетинга, без stock-фото.
+        </p>
+        <div class="stats">
+          <span><b>8</b> тем</span>
+          <span><b>~40</b> концепций</span>
+          <span><b>8</b> квизов</span>
+          <span><b>~120</b> сниппетов</span>
+        </div>
+      </section>
+
+      <section style="margin-top:48px">
+        <h2 class="eyebrow">категории</h2>
+        <div class="cat-grid">
+          <a class="cat" href="#">
+            <div class="head">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+              <span class="title">DevOps</span>
+            </div>
+            <div class="count">8 тем · готово</div>
+          </a>
+          <a class="cat" href="#" data-soon>
+            <div class="head">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg></span>
+              <span class="title">Databases</span>
+            </div>
+            <div class="count">скоро</div>
+          </a>
+          <a class="cat" href="#" data-soon>
+            <div class="head">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h1M9 13h1M9 17h1M14 9h1M14 13h1M14 17h1"/></svg></span>
+              <span class="title">Backend</span>
+            </div>
+            <div class="count">скоро</div>
+          </a>
+        </div>
+      </section>
+
+      <section style="margin-top:48px">
+        <h2 class="eyebrow">devops · 8 тем</h2>
+        <ul class="topics">
+          <li><a href="#topic"><span class="ttl"><b>Ansible &amp; Docker</b> — конфигурация и упаковка</span><span class="meta">5 концепций · 1 квиз</span></a></li>
+          <li><a href="#topic"><span class="ttl"><b>Terraform</b> — инфраструктура как код</span><span class="meta">4 концепции · 1 квиз</span></a></li>
+          <li><a href="#topic"><span class="ttl"><b>Kubernetes</b> — оркестрация на проде</span><span class="meta">6 концепций · 1 квиз</span></a></li>
+          <li><a href="#topic"><span class="ttl"><b>Сети</b> — OSI, маршрутизация, DNS</span><span class="meta">5 концепций · 1 квиз</span></a></li>
+          <li><a href="#topic"><span class="ttl"><b>TLS</b> — рукопожатие, сертификаты, mTLS</span><span class="meta">4 концепции · 1 квиз</span></a></li>
+          <li><a href="#topic"><span class="ttl"><b>PostgreSQL</b> — индексы, MVCC, репликация</span><span class="meta">6 концепций · 1 квиз</span></a></li>
+          <li><a href="#topic"><span class="ttl"><b>MongoDB</b> — схема, шардинг, индексы</span><span class="meta">4 концепции · 1 квиз</span></a></li>
+          <li><a href="#topic"><span class="ttl"><b>ELK</b> — индексация, шарды, retention</span><span class="meta">5 концепций · 1 квиз</span></a></li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SCREEN 2: TOPIC
+   ════════════════════════════════════════════════════════════════════ -->
+<div class="screen" data-screen="topic">
+
+  <header class="app-header">
+    <a class="brand" href="#"><span class="penguin"></span><span>edu.ninitux</span></a>
+    <span class="spacer"></span>
+    <span class="meta">part of ninitux.com</span>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h4>devops</h4>
+      <ul>
+        <li><a href="#">Ansible &amp; Docker</a></li>
+        <li><a href="#">Terraform</a></li>
+        <li><a href="#" aria-current="page">Kubernetes</a></li>
+        <li><a href="#">Сети</a></li>
+        <li><a href="#">TLS</a></li>
+        <li><a href="#">PostgreSQL</a></li>
+        <li><a href="#">MongoDB</a></li>
+        <li><a href="#">ELK</a></li>
+      </ul>
+      <h4>databases</h4>
+      <ul><li><a href="#" class="disabled">скоро</a></li></ul>
+      <h4>backend</h4>
+      <ul><li><a href="#" class="disabled">скоро</a></li></ul>
+    </aside>
+
+    <main class="article">
+      <p class="crumb">
+        <a href="#home">edu</a><span class="sep">/</span>
+        <a href="#home">devops</a><span class="sep">/</span>
+        <span>kubernetes</span>
+      </p>
+
+      <h1 class="topic-h1"><span class="hash">#</span>Kubernetes</h1>
+      <p class="topic-sub">От подов до Ingress: оркестрация контейнеров на проде.</p>
+
+      <h2 class="subeyebrow">аналогия</h2>
+      <aside class="analogy">
+        <div class="analogy-mark">💡</div>
+        <p class="analogy-body">
+          Представь <b>дирижёра большого оркестра</b>: каждый музыкант — это контейнер,
+          группа струнных — это под, партитура — это Deployment. Дирижёр сам не играет, но
+          следит чтобы нужное число скрипок звучало в нужный момент, и заменяет того кто сбился.
+        </p>
+      </aside>
+
+      <h2 class="subeyebrow">ключевые концепции</h2>
+      <div class="concept-grid">
+        <article class="concept">
+          <svg class="concept-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          <h3 class="concept-title">Pod</h3>
+          <p class="concept-desc">Минимальная единица: один или несколько контейнеров с общей сетью и томами.</p>
+        </article>
+        <article class="concept">
+          <svg class="concept-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <h3 class="concept-title">Deployment</h3>
+          <p class="concept-desc">Декларативное описание желаемого состояния: «всегда 3 пода, такие-то».</p>
+        </article>
+        <article class="concept">
+          <svg class="concept-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M3 12h4M17 12h4M12 3v4M12 17v4"/></svg>
+          <h3 class="concept-title">Service</h3>
+          <p class="concept-desc">Стабильная точка входа к подам — даже когда сами поды пересоздаются.</p>
+        </article>
+        <article class="concept">
+          <svg class="concept-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <h3 class="concept-title">Ingress</h3>
+          <p class="concept-desc">HTTP-роутинг снаружи внутрь: host/path → нужный Service.</p>
+        </article>
+        <article class="concept">
+          <svg class="concept-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <h3 class="concept-title">ConfigMap / Secret</h3>
+          <p class="concept-desc">Конфиги и креды отдельно от образа — монтируются как env или файлы.</p>
+        </article>
+        <article class="concept">
+          <svg class="concept-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0"/><path d="M12 7v5l3 2"/></svg>
+          <h3 class="concept-title">HPA</h3>
+          <p class="concept-desc">Авто-масштабирование подов по CPU/памяти или кастомным метрикам.</p>
+        </article>
+      </div>
+
+      <h2 class="subeyebrow">примеры</h2>
+      <div class="code-label"><span>deployment.yaml</span><span class="lang">yaml</span></div>
+      <div class="code">
+<pre><span class="k">apiVersion</span>: apps/v1
+<span class="k">kind</span>: Deployment
+<span class="k">metadata</span>:
+  <span class="k">name</span>: <span class="s">web</span>
+<span class="k">spec</span>:
+  <span class="k">replicas</span>: <span class="n">3</span>
+  <span class="k">selector</span>:
+    <span class="k">matchLabels</span>: { <span class="k">app</span>: <span class="s">web</span> }
+  <span class="k">template</span>:
+    <span class="k">metadata</span>:
+      <span class="k">labels</span>: { <span class="k">app</span>: <span class="s">web</span> }
+    <span class="k">spec</span>:
+      <span class="k">containers</span>:
+        - <span class="k">name</span>: <span class="s">web</span>
+          <span class="k">image</span>: <span class="s">ghcr.io/me/web:1.4.2</span>
+          <span class="k">ports</span>: [{ <span class="k">containerPort</span>: <span class="n">8080</span> }]
+          <span class="k">resources</span>:
+            <span class="k">requests</span>: { <span class="k">cpu</span>: <span class="s">100m</span>, <span class="k">memory</span>: <span class="s">128Mi</span> }
+            <span class="k">limits</span>:   { <span class="k">cpu</span>: <span class="s">500m</span>, <span class="k">memory</span>: <span class="s">512Mi</span> }</pre>
+        <button class="copy" data-copy-target>copy</button>
+      </div>
+
+      <div class="code-label"><span>rollout &amp; status</span><span class="lang">bash</span></div>
+      <div class="code">
+<pre><span class="c"># применить и подождать раскатку</span>
+<span class="k">$</span> kubectl apply <span class="s">-f</span> deployment.yaml
+<span class="k">$</span> kubectl rollout status deployment/web --timeout=2m
+
+<span class="c"># откатить если что-то пошло не так</span>
+<span class="k">$</span> kubectl rollout undo deployment/web</pre>
+        <button class="copy" data-copy-target>copy</button>
+      </div>
+
+      <h2 class="subeyebrow">проверь себя</h2>
+      <div class="quiz" id="quiz1">
+        <p class="quiz-q">Под перезапустился. Почему его IP-адрес теперь другой?</p>
+        <div class="quiz-options">
+          <button class="quiz-opt" data-letter="A" data-correct="false">Потому что Kubernetes специально меняет IP каждые N секунд для безопасности.</button>
+          <button class="quiz-opt" data-letter="B" data-correct="true">Под — эфемерная сущность; новый под получает новый IP. За стабильный адрес отвечает Service.</button>
+          <button class="quiz-opt" data-letter="C" data-correct="false">Это баг CNI-плагина, нужно перезапустить kubelet.</button>
+        </div>
+        <div class="quiz-explain" hidden>
+          <span class="icon">→</span>
+          <span>Pod-уровень IP не гарантируется. Поэтому клиенты ходят через <code>Service</code> (стабильный DNS-имя + ClusterIP), а сам Service следит за актуальным набором подов через label-селектор.</span>
+        </div>
+      </div>
+
+      <nav class="next-prev">
+        <a href="#" class="prev">
+          <span class="label">← предыдущая</span>
+          <span class="ttl">Terraform</span>
+        </a>
+        <a href="#" class="next">
+          <span class="label">следующая →</span>
+          <span class="ttl">Сети</span>
+        </a>
+      </nav>
+    </main>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SCREEN 3: MOBILE
+   ════════════════════════════════════════════════════════════════════ -->
+<div class="screen" data-screen="mobile" style="background:radial-gradient(circle at 50% 30%, rgba(56,189,248,0.05), transparent 60%)">
+  <div class="mobile-frame">
+    <div class="status">
+      <span>9:41</span>
+      <span class="dots"><i></i><i></i><i></i><i></i></span>
+    </div>
+    <div class="m-header">
+      <a class="brand" href="#"><span class="penguin"></span><span>edu.ninitux</span></a>
+      <span class="spacer" style="flex:1"></span>
+      <span class="meta" style="font-size:11px;color:var(--muted-foreground);font-family:var(--font-mono)">k8s</span>
+    </div>
+    <div class="m-content">
+      <p class="crumb"><a href="#">edu</a><span class="sep">/</span><a href="#">devops</a><span class="sep">/</span><span>k8s</span></p>
+      <h1 class="topic-h1"><span class="hash">#</span>Kubernetes</h1>
+      <p class="topic-sub">От подов до Ingress.</p>
+
+      <h2 class="subeyebrow" style="margin-top:18px">аналогия</h2>
+      <aside class="analogy">
+        <div class="analogy-mark">💡</div>
+        <p class="analogy-body">Дирижёр большого оркестра. Сам не играет, но следит чтобы нужное число скрипок звучало в нужный момент.</p>
+      </aside>
+
+      <h2 class="subeyebrow">концепции</h2>
+      <div class="concept-grid">
+        <article class="concept">
+          <svg class="concept-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          <h3 class="concept-title">Pod</h3>
+          <p class="concept-desc">Минимальная единица: контейнеры с общей сетью.</p>
+        </article>
+        <article class="concept">
+          <svg class="concept-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <h3 class="concept-title">Deployment</h3>
+          <p class="concept-desc">Декларативное описание желаемого состояния.</p>
+        </article>
+        <article class="concept">
+          <svg class="concept-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M3 12h4M17 12h4M12 3v4M12 17v4"/></svg>
+          <h3 class="concept-title">Service</h3>
+          <p class="concept-desc">Стабильная точка входа к подам.</p>
+        </article>
+      </div>
+
+      <h2 class="subeyebrow">пример</h2>
+      <div class="code-label"><span>kubectl</span><span class="lang">bash</span></div>
+      <div class="code">
+<pre><span class="k">$</span> kubectl get pods <span class="s">-n</span> prod
+<span class="k">$</span> kubectl logs <span class="s">-f</span> web-7d4f...</pre>
+        <button class="copy" data-copy-target>copy</button>
+      </div>
+    </div>
+
+    <nav class="m-bottom">
+      <a href="#" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m3 12 9-9 9 9"/><path d="M9 21V12h6v9"/></svg>
+        Главная
+      </a>
+      <a href="#" id="open-drawer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-9 4.5 9 4.5 9-4.5L12 3z"/><path d="m3 13.5 9 4.5 9-4.5"/><path d="m3 18 9 4.5 9-4.5"/></svg>
+        Темы
+      </a>
+      <a href="#" id="toggle-theme-mobile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="theme-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        Тема
+      </a>
+    </nav>
+
+    <!-- Drawer (hidden by default) -->
+    <div class="drawer-bg" hidden id="drawer-bg"></div>
+    <aside class="drawer" hidden id="drawer">
+      <button class="drawer-close" id="drawer-close" aria-label="Close">×</button>
+      <h4 style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-foreground);margin:0 0 6px;">
+        <span style="color:var(--primary);opacity:.7"># </span>devops
+      </h4>
+      <ul style="list-style:none;padding:0;margin:0 0 16px;font-size:14px">
+        <li><a href="#" style="display:block;padding:6px 8px;color:var(--muted-foreground);text-decoration:none">Ansible &amp; Docker</a></li>
+        <li><a href="#" style="display:block;padding:6px 8px;color:var(--muted-foreground);text-decoration:none">Terraform</a></li>
+        <li><a href="#" style="display:block;padding:6px 8px;color:var(--foreground);background:var(--accent-bg);border-left:2px solid var(--primary);padding-left:6px;border-radius:var(--radius-sm);text-decoration:none">Kubernetes</a></li>
+        <li><a href="#" style="display:block;padding:6px 8px;color:var(--muted-foreground);text-decoration:none">Сети</a></li>
+        <li><a href="#" style="display:block;padding:6px 8px;color:var(--muted-foreground);text-decoration:none">TLS</a></li>
+        <li><a href="#" style="display:block;padding:6px 8px;color:var(--muted-foreground);text-decoration:none">PostgreSQL</a></li>
+        <li><a href="#" style="display:block;padding:6px 8px;color:var(--muted-foreground);text-decoration:none">MongoDB</a></li>
+        <li><a href="#" style="display:block;padding:6px 8px;color:var(--muted-foreground);text-decoration:none">ELK</a></li>
+      </ul>
+      <h4 style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-foreground);margin:0 0 6px;">
+        <span style="color:var(--primary);opacity:.7"># </span>скоро
+      </h4>
+      <ul style="list-style:none;padding:0;margin:0;font-size:14px">
+        <li><a href="#" style="display:block;padding:6px 8px;color:var(--muted-foreground);opacity:.5;text-decoration:none;pointer-events:none">Databases</a></li>
+        <li><a href="#" style="display:block;padding:6px 8px;color:var(--muted-foreground);opacity:.5;text-decoration:none;pointer-events:none">Backend</a></li>
+      </ul>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Screen switcher
+  const screens = document.querySelectorAll('.screen');
+  const screenBtns = document.querySelectorAll('.mock-bar button[data-screen]');
+  function setScreen(name){
+    screens.forEach(s => s.classList.toggle('active', s.dataset.screen === name));
+    screenBtns.forEach(b => b.setAttribute('aria-pressed', b.dataset.screen === name ? 'true' : 'false'));
+  }
+  screenBtns.forEach(b => b.addEventListener('click', () => setScreen(b.dataset.screen)));
+
+  // Theme switcher
+  const themeBtns = document.querySelectorAll('.mock-bar button[data-theme-set]');
+  function setTheme(t){
+    document.documentElement.setAttribute('data-theme', t);
+    themeBtns.forEach(b => b.setAttribute('aria-pressed', b.dataset.themeSet === t ? 'true' : 'false'));
+  }
+  themeBtns.forEach(b => b.addEventListener('click', () => setTheme(b.dataset.themeSet)));
+
+  // Copy buttons
+  document.querySelectorAll('.code .copy').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const pre = btn.parentElement.querySelector('pre');
+      const text = pre ? pre.innerText : '';
+      try { await navigator.clipboard.writeText(text); } catch(e) {}
+      const old = btn.textContent;
+      btn.textContent = 'copied';
+      btn.classList.add('ok');
+      setTimeout(() => { btn.textContent = old; btn.classList.remove('ok'); }, 1200);
+    });
+  });
+
+  // Quiz logic
+  document.querySelectorAll('.quiz').forEach(quiz => {
+    const opts = quiz.querySelectorAll('.quiz-opt');
+    const explain = quiz.querySelector('.quiz-explain');
+    opts.forEach(o => o.addEventListener('click', () => {
+      if (quiz.dataset.answered) return;
+      const correct = o.dataset.correct === 'true';
+      o.setAttribute('data-state', correct ? 'correct' : 'incorrect');
+      if (!correct) {
+        const right = quiz.querySelector('.quiz-opt[data-correct="true"]');
+        if (right) right.setAttribute('data-state', 'correct');
+      }
+      opts.forEach(x => x.disabled = true);
+      if (explain) explain.hidden = false;
+      quiz.dataset.answered = '1';
+    }));
+  });
+
+  // Mobile drawer
+  const drawer = document.getElementById('drawer');
+  const drawerBg = document.getElementById('drawer-bg');
+  const openBtn = document.getElementById('open-drawer');
+  const closeBtn = document.getElementById('drawer-close');
+  function openDrawer(){ drawer.hidden = false; drawerBg.hidden = false; }
+  function closeDrawer(){ drawer.hidden = true; drawerBg.hidden = true; }
+  if (openBtn) openBtn.addEventListener('click', e => { e.preventDefault(); openDrawer(); });
+  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  if (drawerBg) drawerBg.addEventListener('click', closeDrawer);
+
+  // Mobile theme toggle (inside the phone frame)
+  const mthemeBtn = document.getElementById('toggle-theme-mobile');
+  if (mthemeBtn) mthemeBtn.addEventListener('click', e => {
+    e.preventDefault();
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+  });
+})();
+</script>
+</body>
+</html>
