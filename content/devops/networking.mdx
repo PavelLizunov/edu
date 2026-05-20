@@ -1,0 +1,154 @@
+---
+title: "Сети"
+slug: "networking"
+category: "devops"
+icon: "Network"
+order: 4
+tags: ["networking", "tcp", "dns", "iptables", "nat"]
+description: "OSI, IP, NAT, DNS, iptables — сетевой минимум для инженера"
+---
+
+## Аналогия
+
+<AnalogyBox>
+Сеть — это почтовая служба. Твой IP-адрес — номер дома, MAC-адрес — табличка с фамилией
+на конкретной двери в этом доме, маршрутизатор — районное почтовое отделение, которое
+знает куда везти письмо дальше. NAT — это портье в офисном центре: сотня сотрудников
+получает письма снаружи через один адрес офиса, и только портье знает кому из них
+что предназначалось.
+</AnalogyBox>
+
+## Ключевые концепции
+
+<ConceptGrid>
+  <ConceptCard title="OSI и TCP/IP" icon="Layers">
+    7 слоёв OSI — это теория для troubleshooting: L1 (кабель), L2 (MAC, Ethernet),
+    L3 (IP, маршрутизация), L4 (TCP/UDP, порты), L7 (HTTP, DNS). На практике работаешь
+    с L3+L4 через `ip`/`ss`, с L7 через `curl`/`dig`. Проблема «пинг идёт, HTTP нет» —
+    это L4 или L7, а не L3.
+  </ConceptCard>
+
+  <ConceptCard title="CIDR и подсети" icon="Globe">
+    `192.168.1.0/24` — 256 адресов, из них 254 хостовых (первый — адрес сети, последний —
+    broadcast). `/24` — 256, `/25` — 128, `/16` — 65536. Чтобы прикинуть маску в голове:
+    `2^(32-prefix)`. Перекрывающиеся подсети в одном VPC — частая причина проблем с
+    маршрутизацией при VPN-пиринге.
+  </ConceptCard>
+
+  <ConceptCard title="NAT: SNAT и DNAT" icon="Route">
+    SNAT (Source NAT) — подменяет исходящий IP, используется чтобы машины из приватной сети
+    выходили в интернет через один публичный IP. DNAT (Destination NAT) — подменяет
+    адрес назначения, используется для проброса порта снаружи внутрь. В iptables SNAT живёт
+    в цепочке `POSTROUTING`, DNAT — в `PREROUTING`.
+  </ConceptCard>
+
+  <ConceptCard title="iptables и nftables" icon="Shield">
+    iptables обрабатывает пакеты по таблицам (`filter`, `nat`, `mangle`) и цепочкам
+    (`INPUT`, `OUTPUT`, `FORWARD`). `INPUT` — трафик до локального процесса, `FORWARD` —
+    транзитный (роутинг), `OUTPUT` — от локального процесса наружу. nftables — современная
+    замена, одна утилита `nft` вместо `iptables`/`ip6tables`/`arptables`. На Ubuntu 22+ —
+    по умолчанию nftables под капотом, iptables — обёртка.
+  </ConceptCard>
+
+  <ConceptCard title="DNS" icon="Search">
+    A-запись — имя → IPv4. AAAA — имя → IPv6. CNAME — алиас на другое имя (нельзя на корень
+    зоны). MX — почтовый сервер. TTL определяет сколько секунд ответ кешируется у резолвера.
+    `dig +short example.com A` — быстрый способ проверить что отдаёт DNS без кеша браузера.
+    Если `localhost` и `127.0.0.1` ведут себя по-разному — скорее всего `/etc/hosts` или
+    Docker-резолвер возвращают разные IP.
+  </ConceptCard>
+
+  <ConceptCard title="VLAN" icon="Cable">
+    Логическое разделение сети внутри одной физической. Хосты в VLAN 10 и VLAN 20 через
+    один коммутатор не видят друг друга без маршрутизатора — даже если на одном железе.
+    Тегируется на уровне Ethernet-фрейма (802.1Q). На Linux создаётся через `ip link add
+    link eth0 name eth0.10 type vlan id 10`.
+  </ConceptCard>
+</ConceptGrid>
+
+## Примеры
+
+**Диагностика сети — базовый набор**
+
+```bash
+# Посмотреть все интерфейсы и их IP
+ip a
+
+# Таблица маршрутов: какой интерфейс/шлюз используется для адреса
+ip route
+ip route get 8.8.8.8   # точный маршрут до конкретного хоста
+
+# Слушающие TCP-сокеты с процессами (аналог netstat -tnlp)
+ss -tnlp
+
+# Проверить связность и RTT
+ping -c4 8.8.8.8
+
+# Трассировка маршрута: где пакет теряется или притормаживает
+traceroute -n 8.8.8.8   # -n чтобы не резолвить DNS и не ждать таймаутов
+
+# DNS: что реально отдаёт резолвер (минуя кеш браузера/ОС)
+dig +short example.com A
+dig +short example.com MX
+dig @1.1.1.1 example.com A   # запрос к конкретному резолверу
+
+# Проверить что порт открыт и кто его держит
+ss -tnlp | grep :80
+```
+
+**iptables — проброс порта 80 → 8080 и базовый файрвол**
+
+```bash
+# DNAT: входящий трафик на порт 80 перенаправить на 127.0.0.1:8080
+# Нужно если приложение слушает на 8080, а снаружи должен быть порт 80
+iptables -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination 127.0.0.1:8080
+iptables -t nat -A OUTPUT -p tcp --dport 80 -j DNAT --to-destination 127.0.0.1:8080
+
+# SNAT/MASQUERADE: машины из 10.0.0.0/24 выходят в интернет через eth0
+iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -o eth0 -j MASQUERADE
+# Не забыть включить IP forwarding:
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+# Базовый файрвол: дропать всё входящее кроме SSH и established
+iptables -P INPUT DROP            # дефолтная политика — дроп
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT  # ответы на исходящие
+iptables -A INPUT -i lo -j ACCEPT                                   # loopback
+iptables -A INPUT -p tcp --dport 22 -j ACCEPT                      # SSH
+
+# Посмотреть текущие правила с номерами строк и счётчиками
+iptables -L -n -v --line-numbers
+iptables -t nat -L -n -v           # правила NAT-таблицы
+
+# Удалить конкретное правило по номеру (из вывода --line-numbers)
+iptables -D INPUT 3
+```
+
+**tcpdump — перехват трафика для отладки**
+
+```bash
+# Слушать интерфейс eth0, только трафик от/до хоста и порта 443
+# -n — не резолвить DNS (быстрее), -nn — ещё и порты числами
+tcpdump -i eth0 host 1.2.3.4 and port 443 -nn
+
+# Записать в файл для последующего анализа в Wireshark
+tcpdump -i eth0 port 443 -nn -w /tmp/capture.pcap
+
+# Посмотреть содержимое HTTP-пакетов в ASCII (только незашифрованный трафик)
+tcpdump -i eth0 port 80 -A -nn
+
+# Все TCP SYN-пакеты (новые соединения) — удобно чтобы видеть кто к чему коннектится
+tcpdump -i eth0 'tcp[tcpflags] & tcp-syn != 0' -nn
+```
+
+## Проверь себя
+
+<QuizCard
+  question="Приложение в Docker-контейнере пытается обратиться по адресу localhost:5432, но получает 'Connection refused', хотя PostgreSQL запущен на хосте и слушает 5432. В чём причина?"
+  options={[
+    "PostgreSQL не добавлен в одну Docker-сеть с контейнером, нужно создать docker network",
+    "Внутри контейнера localhost — это loopback самого контейнера, а не хоста; нужно использовать host.docker.internal или IP хостового интерфейса",
+    "Docker блокирует обращения к порту 5432 по соображениям безопасности, нужно добавить правило в iptables"
+  ]}
+  correct={1}
+  explanation="У каждого контейнера свой сетевой namespace, поэтому localhost внутри контейнера резолвится в 127.0.0.1 контейнера, а не хоста. Чтобы достучаться до сервиса на хосте, используй host.docker.internal (Mac/Windows) или IP хостового docker0-интерфейса (172.17.0.1 по умолчанию на Linux). Либо запусти контейнер с --network=host, но тогда он потеряет изоляцию."
+/>

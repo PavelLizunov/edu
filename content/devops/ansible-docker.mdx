@@ -1,0 +1,175 @@
+---
+title: "Ansible & Docker"
+slug: "ansible-docker"
+category: "devops"
+icon: "Container"
+order: 1
+tags: ["ansible", "docker", "containers", "config-management"]
+description: "Идемпотентная конфигурация серверов + упаковка приложений в контейнеры"
+---
+
+## Аналогия
+
+<AnalogyBox>
+Ansible — как шеф-повар с рецептом, который сначала пробует блюдо и досыпает соль только
+если её не хватает. Запусти рецепт хоть десять раз — результат одинаковый, пересолить нельзя.
+Docker — это не рецепт, а сама коробка с плитой, кастрюлями и всеми ингредиентами внутри.
+Берёшь коробку, открываешь — кухня уже готова к работе, на любом столе.
+</AnalogyBox>
+
+## Ключевые концепции
+
+<ConceptGrid>
+  <ConceptCard title="Idempotency" icon="RefreshCw">
+    Запускаешь playbook второй раз — ничего не ломается, уже настроенное не трогается.
+    Ansible сравнивает желаемое состояние с фактическим и делает только недостающее.
+    Нарушение идемпотентности — главный признак плохо написанного playbook.
+  </ConceptCard>
+
+  <ConceptCard title="Inventory" icon="ListTree">
+    Список хостов и групп: `[web]`, `[db]`, `[all]`. Статический — просто ini/yaml файл.
+    Динамический — скрипт или плагин, который тянет список из AWS/GCP/Hetzner в runtime.
+    Переменные хоста живут в `host_vars/<hostname>.yml`, группы — в `group_vars/<group>.yml`.
+  </ConceptCard>
+
+  <ConceptCard title="Playbook & Roles" icon="Workflow">
+    Playbook — YAML со списком plays, каждый play = хосты + задачи. Role — переиспользуемый
+    блок: tasks, handlers, defaults, templates в одной папке. Правило: если роль
+    используется больше одного раза — выноси в `roles/`, иначе можно и в playbook.
+  </ConceptCard>
+
+  <ConceptCard title="Image vs Container" icon="Package">
+    Image — неизменяемый слепок файловой системы, шаблон. Container — запущенный процесс
+    поверх image с тонким writable-слоем. Один image → тысячи контейнеров одновременно.
+    Удалил контейнер — writable-слой исчез, image остался.
+  </ConceptCard>
+
+  <ConceptCard title="Layers & кеш сборки" icon="Layers">
+    Каждая инструкция в Dockerfile — отдельный слой. Docker кеширует слои сверху вниз
+    и пересобирает с первого изменённого. `COPY . .` перед `npm install` — антипаттерн:
+    любое изменение кода сбрасывает кеш зависимостей. Сначала `package.json`, потом `npm install`,
+    потом исходники.
+  </ConceptCard>
+
+  <ConceptCard title="Volumes" icon="HardDrive">
+    Данные в writable-слое контейнера исчезают при `docker rm`. Volume живёт отдельно
+    от контейнера и переживает его пересоздание. Bind mount (`./data:/data`) удобен
+    в dev, named volume (`pgdata:/var/lib/postgresql/data`) — правильный выбор для прода.
+  </ConceptCard>
+</ConceptGrid>
+
+## Примеры
+
+**playbook.yml — nginx на хосте web**
+
+```yaml
+---
+- name: Настройка веб-сервера
+  hosts: web
+  become: true  # sudo
+
+  vars:
+    nginx_version: "1.27.*"
+
+  tasks:
+    - name: Установить nginx
+      ansible.builtin.apt:
+        name: "nginx={{ nginx_version }}"
+        state: present
+        update_cache: true
+
+    - name: Скопировать конфиг сайта
+      ansible.builtin.template:
+        src: templates/site.conf.j2
+        dest: /etc/nginx/sites-available/default
+        mode: "0644"
+      notify: Перезапустить nginx  # вызывает handler только при изменении
+
+    - name: Убедиться что nginx запущен и включён в автозагрузку
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Перезапустить nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+```
+
+**Dockerfile — Node-приложение с правильным порядком слоёв**
+
+```dockerfile
+FROM node:20-alpine AS deps
+WORKDIR /app
+# Сначала только манифест зависимостей — этот слой кешируется пока не изменится package.json
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+# Исходники копируем последними — их изменение не сбрасывает кеш зависимостей
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+# Только артефакты, без dev-зависимостей и исходников
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY package.json ./
+
+EXPOSE 3000
+CMD ["node", "dist/index.js"]
+```
+
+**docker-compose.yml — web + postgres**
+
+```yaml
+services:
+  web:
+    build: .
+    image: myapp:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://app:secret@db:5432/appdb
+    depends_on:
+      db:
+        condition: service_healthy  # ждёт healthcheck, а не просто старт
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data  # named volume, данные переживают пересоздание
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:
+```
+
+## Проверь себя
+
+<QuizCard
+  question="Почему инструкция COPY . . перед RUN npm install в Dockerfile — антипаттерн?"
+  options={[
+    "Docker не умеет кешировать слои с COPY, поэтому это замедляет только первую сборку",
+    "Любое изменение исходного кода сбрасывает кеш слоя с npm install, и зависимости переустанавливаются каждый раз",
+    "COPY . . копирует node_modules с хоста внутрь образа и перезаписывает установленные зависимости"
+  ]}
+  correct={1}
+  explanation="Docker инвалидирует кеш слоя при любом изменении входных файлов. Если COPY . . стоит до npm install — правка одного .ts файла сбрасывает кеш установки зависимостей, и npm ci запускается заново. Решение: сначала скопировать только package.json, установить зависимости, затем копировать исходники."
+/>

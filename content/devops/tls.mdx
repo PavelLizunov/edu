@@ -1,0 +1,135 @@
+---
+title: "TLS и сертификаты"
+slug: "tls"
+category: "devops"
+icon: "Lock"
+order: 5
+tags: ["tls", "ssl", "x509", "openssl", "letsencrypt"]
+description: "Симметричное/асимметричное шифрование, X.509, handshake, mTLS, Let's Encrypt"
+---
+
+## Аналогия
+
+<AnalogyBox>
+Двое за столом в шумном кафе хотят поговорить о секретах. Сначала они в открытую договариваются о шифре — это handshake. Но до этого один показывает паспорт с печатью нотариуса, чтобы второй убедился: это действительно тот человек, а не самозванец. Нотариуса оба заранее знают и доверяют ему. После того как договорились о шифре, переходят на него — он быстрее, чем объяснять каждое слово через нотариуса.
+</AnalogyBox>
+
+## Ключевые концепции
+
+<ConceptGrid>
+  <ConceptCard title="Симметричное vs асимметричное" icon="KeyRound">
+    Асимметричное (RSA, ECDSA) — медленное, используется только для обмена ключом в handshake. Симметричное (AES-GCM) — быстрое, шифрует весь трафик сессии. TLS применяет оба: асимметричное чтобы договориться о ключе, симметричное — чтобы передавать данные.
+  </ConceptCard>
+
+  <ConceptCard title="X.509 и цепочка доверия" icon="Link">
+    Сертификат — это публичный ключ + подпись CA. Root CA подписывает Intermediate, Intermediate подписывает leaf (твой домен). Root не выдаёт leaf напрямую: если root скомпрометирован, достаточно отозвать один Intermediate, а не перевыпускать все сертификаты мира. Браузер доверяет root из встроенного хранилища.
+  </ConceptCard>
+
+  <ConceptCard title="TLS Handshake" icon="Shuffle">
+    ClientHello (версия TLS, cipher suites) → ServerHello + сертификат + выбранный cipher → обмен ключом (ECDHE) → Finished с MAC обеих сторон. Если браузер ругается на cert — первое что проверяй: а) истёк ли срок, б) передаёт ли сервер полную цепочку (leaf + intermediate), в) совпадает ли CN/SAN с hostname.
+  </ConceptCard>
+
+  <ConceptCard title="mTLS" icon="ShieldCheck">
+    Mutual TLS — клиент тоже предъявляет свой сертификат, сервер его проверяет. Стандарт внутри service-mesh (Istio, Linkerd): сервисы аутентифицируют друг друга без логинов и токенов. Грабля: если у клиента нет сертификата или он выдан другим CA — соединение рвётся с неочевидной ошибкой `SSL handshake failed`.
+  </ConceptCard>
+
+  <ConceptCard title="Let's Encrypt + ACME" icon="Globe">
+    ACME-протокол автоматизирует выдачу cert. HTTP-01 challenge: LE просит положить файл по пути `/.well-known/acme-challenge/<token>` на твоём сервере и проверяет его через HTTP. Если порт 80 закрыт или сервер за NAT — используй DNS-01 (TXT-запись в зоне). Срок сертификата — 90 дней, обновлять лучше каждые 60.
+  </ConceptCard>
+
+  <ConceptCard title="SNI — один IP, много сертификатов" icon="Network">
+    Server Name Indication: клиент в ClientHello передаёт hostname. Сервер смотрит на него ещё до TLS-рукопожатия и выбирает нужный сертификат. Без SNI на одном IP мог быть только один TLS-сайт. Грабля: старые клиенты (IE на XP) SNI не поддерживают, но это уже история.
+  </ConceptCard>
+</ConceptGrid>
+
+## Примеры
+
+**Самоподписанный сертификат с SAN (openssl req)**
+
+```bash
+# Генерируем приватный ключ и сертификат за одну команду.
+# -subj и -addext нужны чтобы браузер не ругался на отсутствие SAN.
+openssl req -x509 -newkey ec \
+  -pkeyopt ec_paramgen_curve:P-256 \
+  -keyout server.key \
+  -out server.crt \
+  -days 365 \
+  -nodes \
+  -subj "/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+
+# Проверяем что SAN прописан
+openssl x509 -in server.crt -noout -text | grep -A2 "Subject Alternative"
+```
+
+**Дебаг: что сервер реально отдаёт на 443**
+
+```bash
+# Показывает цепочку сертификатов, срок действия и cipher suite.
+# -servername нужен для SNI — без него получишь дефолтный сертификат хоста.
+openssl s_client -connect example.com:443 -servername example.com -showcerts 2>/dev/null \
+  | openssl x509 -noout -dates -subject -issuer
+
+# Если браузер ругается "incomplete chain" — проверь что intermediate тоже отдаётся:
+openssl s_client -connect example.com:443 -servername example.com 2>/dev/null \
+  | grep -E "^(depth|verify)"
+
+# Быстрый чек срока: warn если < 30 дней
+echo | openssl s_client -connect example.com:443 -servername example.com 2>/dev/null \
+  | openssl x509 -noout -checkend 2592000 \
+  && echo "cert OK" || echo "WARN: expires in < 30 days"
+```
+
+**nginx.conf — TLS с Let's Encrypt и современными cipher suites**
+
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+
+    # Нужен для HTTP-01 challenge certbot-а
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+
+    # fullchain.pem уже содержит leaf + intermediate — не нужен отдельный ssl_trusted_certificate
+    ssl_trusted_certificate /etc/letsencrypt/live/example.com/chain.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # Только AEAD cipher suites — без RC4, 3DES, CBC без GCM
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers off; # TLS 1.3 сам выбирает, не мешай
+
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off; # forward secrecy: нет долгосрочного session ticket key
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+}
+```
+
+## Проверь себя
+
+<QuizCard
+  question="Браузер показывает ошибку «certificate chain incomplete» на сайте с валидным leaf-сертификатом от известного CA. В чём проблема?"
+  options={[
+    "Сертификат выдан на другой домен — не совпадает CN/SAN",
+    "Сервер отдаёт только leaf-сертификат и не включает intermediate в ответ",
+    "Root CA не входит в доверенное хранилище операционной системы"
+  ]}
+  correct={1}
+  explanation="Браузер знает root CA из встроенного хранилища, но не знает intermediate — его должен отдавать сервер. Если nginx настроен на ssl_certificate с leaf-only PEM вместо fullchain.pem, цепочка рвётся. Фикс: использовать fullchain.pem, который содержит leaf + все intermediate."
+/>

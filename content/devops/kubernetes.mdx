@@ -1,0 +1,194 @@
+---
+title: "Kubernetes"
+slug: "kubernetes"
+category: "devops"
+icon: "Boxes"
+order: 3
+tags: ["kubernetes", "orchestration", "containers", "ops"]
+description: "От подов до Ingress: оркестрация контейнеров на проде"
+---
+
+## Аналогия
+
+<AnalogyBox>
+Представь склад с сотнями работников. Есть бригадир (Deployment) — ты говоришь ему «хочу чтобы на упаковке всегда стояло 5 человек». Если кто-то заболел или ушёл, бригадир сам найдёт замену. Есть диспетчер (Service) — клиенты звонят на один номер, он сам решает кого из свободных работников соединить. А охранник на входе (Ingress) решает, в какой цех пустить по имени и пропуску.
+</AnalogyBox>
+
+## Ключевые концепции
+
+<ConceptGrid>
+  <ConceptCard title="Pod" icon="Boxes">
+    Минимальная единица планирования. Один или несколько контейнеров с общим сетевым
+    пространством и томами. IP у пода эфемерный — умер под, IP пропал. Поэтому Pod
+    не используют напрямую, только через Deployment или StatefulSet.
+  </ConceptCard>
+
+  <ConceptCard title="Deployment" icon="Layers">
+    Управляет ReplicaSet, который держит N копий пода. `kubectl rollout undo` откатывает
+    на предыдущий ReplicaSet. Не используй для stateful-сервисов с PVC — там нужен
+    StatefulSet, который даёт стабильное имя и порядок запуска/остановки.
+  </ConceptCard>
+
+  <ConceptCard title="Service" icon="Network">
+    Стабильный виртуальный IP и DNS-имя перед группой подов. Трафик идёт только на поды
+    с совпадающими `labels`. `ClusterIP` — внутри кластера, `NodePort` — снаружи через
+    порт ноды, `LoadBalancer` — облачный балансировщик.
+  </ConceptCard>
+
+  <ConceptCard title="Ingress" icon="Route">
+    HTTP(S)-роутер: один внешний IP, маршрутизация по хосту и пути к нужным Service.
+    Сам по себе Ingress — только правила; нужен Ingress Controller (nginx, Traefik,
+    Istio). Без TLS-секрета трафик идёт в открытом виде.
+  </ConceptCard>
+
+  <ConceptCard title="ConfigMap и Secret" icon="Key">
+    ConfigMap хранит незащищённые конфиги (env, файлы). Secret — то же самое, но
+    base64-кодирован. Это не шифрование — любой с доступом к кластеру читает Secret
+    через `kubectl get secret`. Для настоящих секретов используй Vault или
+    External Secrets Operator.
+  </ConceptCard>
+
+  <ConceptCard title="HPA" icon="TrendingUp">
+    Horizontal Pod Autoscaler масштабирует количество реплик Deployment по метрикам
+    (CPU, память, custom). Требует `requests.cpu` в манифесте — без них HPA не знает
+    от чего считать процент загрузки и просто ничего не делает.
+  </ConceptCard>
+</ConceptGrid>
+
+## Примеры
+
+**deployment.yaml — production-ready nginx**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: production
+  labels:
+    app: web
+    version: "1.27"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1   # не больше 1 пода недоступно во время обновления
+      maxSurge: 1         # временно можно поднять на 1 под сверх replicas
+  template:
+    metadata:
+      labels:
+        app: web
+        version: "1.27"
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.27-alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 100m      # гарантировано зарезервировано на ноде
+            memory: 64Mi
+          limits:
+            cpu: 500m      # выше — throttling, не kill
+            memory: 256Mi  # выше — OOMKill
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          # под не получит трафик пока проба не пройдёт
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          # провал — перезапуск контейнера, а не всего пода
+```
+
+**service.yaml + ingress.yaml**
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: production
+spec:
+  selector:
+    app: web          # трафик идёт на поды с этим лейблом
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP     # только внутри кластера; Ingress сам выставит наружу
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web
+  namespace: production
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - app.example.com
+    secretName: app-tls   # kubectl create secret tls app-tls --cert=... --key=...
+  rules:
+  - host: app.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web
+            port:
+              number: 80
+```
+
+**Диагностика и управление — kubectl**
+
+```bash
+# Посмотреть состояние подов с причиной проблемы
+kubectl get pods -n production -o wide
+
+# Почему под застрял в Pending / CrashLoopBackOff
+kubectl describe pod -n production web-7d9f8b-xk2p4
+
+# Хвост логов деплоймента (все реплики)
+kubectl logs -n production -f deploy/web --max-log-requests=5
+
+# Статус rolling update — ждёт ли он чего-то
+kubectl rollout status deploy/web -n production
+
+# Откат на предыдущую версию образа
+kubectl rollout undo deploy/web -n production
+
+# Принудительное масштабирование (пересилит HPA до следующей итерации)
+kubectl scale deploy/web -n production --replicas=5
+
+# Посмотреть историю ревизий Deployment
+kubectl rollout history deploy/web -n production
+```
+
+## Проверь себя
+
+<QuizCard
+  question="Pod в твоём Deployment постоянно перезапускается. kubectl describe показывает OOMKilled. Ты поднял limits.memory с 256Mi до 512Mi — поды не перезапускаются, но через 10 минут HPA не масштабирует деплоймент несмотря на 90% CPU. В чём проблема?"
+  options={[
+    "HPA не работает с Deployment, только со StatefulSet",
+    "Не выставлен requests.cpu — HPA не знает базу для расчёта процента загрузки",
+    "Нужно перезапустить kube-controller-manager чтобы HPA подхватил новый лимит",
+    "HPA игнорирует CPU и реагирует только на memory, нужно изменить метрику"
+  ]}
+  correct={1}
+  explanation="HPA вычисляет загрузку как текущее потребление CPU относительно requests.cpu пода. Если requests.cpu не задан, метрика не определена и HPA не предпринимает действий — в событиях HPA будет ошибка 'missing request for cpu'."
+/>

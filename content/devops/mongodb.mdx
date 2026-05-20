@@ -1,0 +1,150 @@
+---
+title: "MongoDB"
+slug: "mongodb"
+category: "devops"
+icon: "HardDrive"
+order: 7
+tags: ["mongodb", "nosql", "document-db", "sharding"]
+description: "Document model, индексы, replica set, sharding, aggregation"
+---
+
+## Аналогия
+
+<AnalogyBox>
+Представь картотеку, где на каждую карточку вынесено всё об одном человеке: имя, адрес, список покупок, история звонков. Чтобы узнать о человеке всё — берёшь одну карточку. В обычной картотеке пришлось бы бегать за справками в три разных ящика и потом склеивать ответ. Минус: если один и тот же телефон записан на двух карточках, а ты поменял номер только в одной — данные расползлись.
+</AnalogyBox>
+
+## Ключевые концепции
+
+<ConceptGrid>
+  <ConceptCard title="Document & Collection" icon="FileText">
+    Документ — JSON-объект в BSON-кодировке, хранится целиком. Embedding (вложенный объект) быстрее JOIN, но дублирует данные. Reference (`ObjectId`) нормализует, но требует второго запроса. Правило: если данные всегда читаются вместе — embed, если живут самостоятельно — reference.
+  </ConceptCard>
+
+  <ConceptCard title="Индексы" icon="Search">
+    Без индекса — полный скан коллекции (COLLSCAN). Compound index (`{a:1, b:1}`) работает по prefix: покрывает запросы по `a` и по `(a, b)`, но не по одному `b`. Multikey index строится автоматически для полей-массивов. Hashed index — только для shard key, не поддерживает range-запросы.
+  </ConceptCard>
+
+  <ConceptCard title="Aggregation Pipeline" icon="Filter">
+    Цепочка этапов: `$match` (фильтр, работает по индексу) → `$group` (агрегация) → `$sort` → `$limit`. Аналог SQL `WHERE + GROUP BY + ORDER BY`, но этапы можно комбинировать и переставлять. `$match` всегда ставь первым — он режет выборку до группировки.
+  </ConceptCard>
+
+  <ConceptCard title="Replica Set" icon="RefreshCw">
+    Один primary принимает записи, один или несколько secondaries реплицируются асинхронно. При падении primary secondaries выбирают нового голосованием (election, ~10–30 с). Чтение с secondary через `readPreference: "secondaryPreferred"` снижает нагрузку, но даёт stale data.
+  </ConceptCard>
+
+  <ConceptCard title="Sharding" icon="Shuffle">
+    Горизонтальное разбиение данных по shard key. Хороший shard key — высокая кардинальность + равномерное распределение записей. Плохой пример: `created_at` — все новые документы уходят в один шард (hotspot). `_id` с ObjectId — хорош по кардинальности, но монотонно растёт, что тоже создаёт hotspot при вставке.
+  </ConceptCard>
+
+  <ConceptCard title="ACID-транзакции" icon="Shield">
+    Multi-document транзакции появились в 4.0, но дорогие: лок на уровне документов, WAL, rollback. Используй их как запасной вариант. Правильная модель — проектировать так, чтобы атомарная операция укладывалась в один документ: MongoDB атомарен на уровне одного документа без всяких транзакций.
+  </ConceptCard>
+</ConceptGrid>
+
+## Примеры
+
+**Индексы: unique, compound, partial**
+
+```javascript
+// Уникальный индекс — дубли по email на уровне базы, не в приложении
+db.users.createIndex({ email: 1 }, { unique: true })
+
+// Compound: покрывает запросы по status, по (status + createdAt)
+// Но не по одному createdAt — prefix rule
+db.orders.createIndex({ status: 1, createdAt: -1 })
+
+// Partial index — индексируем только активные документы,
+// не тратим место на архив
+db.orders.createIndex(
+  { userId: 1 },
+  { partialFilterExpression: { status: { $in: ["pending", "processing"] } } }
+)
+
+// Проверить, что запрос использует индекс (ищем IXSCAN, не COLLSCAN)
+db.orders.find({ status: "pending" }).explain("executionStats")
+```
+
+**Aggregation pipeline — топ-10 покупателей за месяц**
+
+```javascript
+db.orders.aggregate([
+  // $match первым — отсекаем документы до группировки, работает по индексу
+  {
+    $match: {
+      createdAt: {
+        $gte: new Date("2026-04-01"),
+        $lt:  new Date("2026-05-01")
+      },
+      status: "completed"
+    }
+  },
+  // Суммируем выручку по каждому покупателю
+  {
+    $group: {
+      _id: "$userId",
+      totalSpent: { $sum: "$amount" },
+      orderCount: { $sum: 1 }
+    }
+  },
+  // Сортируем по убыванию суммы
+  {
+    $sort: { totalSpent: -1 }
+  },
+  // Топ-10
+  {
+    $limit: 10
+  },
+  // Подтягиваем имя пользователя из коллекции users
+  {
+    $lookup: {
+      from: "users",
+      localField: "_id",
+      foreignField: "_id",
+      as: "user"
+    }
+  },
+  {
+    $unwind: "$user"
+  },
+  {
+    $project: {
+      _id: 0,
+      name:       "$user.name",
+      totalSpent: 1,
+      orderCount: 1
+    }
+  }
+])
+```
+
+**Replica set: статус и ручное переключение**
+
+```javascript
+// Текущее состояние replica set — кто primary, кто secondary, lag
+rs.status()
+
+// Конфигурация: члены, приоритеты, hidden-узлы
+rs.conf()
+
+// Принудительный stepdown primary (для обслуживания без даунтайма)
+// secondary с наибольшим optime станет новым primary
+rs.stepDown()
+
+// Проверить отставание secondary (seconds behind primary)
+// В rs.status() смотри поле optimeDate у каждого члена
+rs.printSecondaryReplicationInfo()
+```
+
+## Проверь себя
+
+<QuizCard
+  question="Ты создал compound multikey индекс { tags: 1, category: 1 }, где tags — массив строк, category — строка. MongoDB вернёт ошибку при вставке документа, у которого оба поля — массивы. Почему?"
+  options={[
+    "MongoDB не поддерживает compound индексы на полях с массивами вообще",
+    "Compound multikey индекс запрещает, чтобы более одного поля в одном документе содержало массив — декартово произведение индексных записей было бы слишком большим",
+    "Ошибки не будет — документ вставится, но индекс для этого документа просто не обновится"
+  ]}
+  correct={1}
+  explanation="MongoDB разрешает compound multikey index, но только если в конкретном документе массивом является не более одного из индексируемых полей. Если оба поля — массивы, количество индексных записей равно их декартову произведению, и MongoDB отклоняет такую вставку с ошибкой."
+/>

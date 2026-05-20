@@ -1,0 +1,159 @@
+---
+title: "PostgreSQL"
+slug: "postgresql"
+category: "devops"
+icon: "Database"
+order: 6
+tags: ["postgresql", "rdbms", "sql", "indexes", "mvcc"]
+description: "MVCC, индексы, EXPLAIN, репликация, vacuum — что должен знать Middle+"
+---
+
+## Аналогия
+
+<AnalogyBox>
+Представь библиотеку, где хранятся все версии каждой книги. Читатель берёт ту версию, которая была актуальна в момент его прихода, — даже если библиотекарь уже кладёт рядом новое издание. Старые версии никуда не деваются сами: раз в несколько часов приходит уборщик и выбрасывает те, которые никому больше не нужны. Без уборщика полки переполнятся — книги найдутся, но идти к нужной придётся дольше.
+</AnalogyBox>
+
+## Ключевые концепции
+
+<ConceptGrid>
+  <ConceptCard title="MVCC" icon="Copy">
+    Multi-Version Concurrency Control. Каждая строка хранит `xmin` и `xmax` — ID транзакций, которые её создали и удалили. Читающая транзакция видит только строки, у которых `xmin <= её snapshot`. Благодаря этому READ не блокирует WRITE и наоборот. Антипаттерн — долгие транзакции: они держат снапшот, из-за которого VACUUM не может убрать старые версии строк.
+  </ConceptCard>
+
+  <ConceptCard title="Индексы" icon="Search">
+    B-tree — дефолт, работает для `=`, `<`, `>`, `BETWEEN`, `LIKE 'prefix%'`. GIN — для `jsonb`, `tsvector` и массивов: умеет искать по содержимому. Partial index уменьшает размер и ускоряет запросы с фиксированным условием: `CREATE INDEX ON orders (user_id) WHERE status = 'pending'`. `CREATE INDEX CONCURRENTLY` строит индекс без эксклюзивной блокировки таблицы — обязателен на проде.
+  </ConceptCard>
+
+  <ConceptCard title="EXPLAIN ANALYZE" icon="Lightbulb">
+    `EXPLAIN` показывает план без выполнения, `EXPLAIN ANALYZE` — выполняет и показывает реальное время. Смотри на `Seq Scan` по большой таблице — индекс не используется. `cost=0.00..8.27` — оценка планировщика, `actual time=0.019..0.021` — реальное. Если `rows=1000` в плане, а `actual rows=1` — статистика устарела, запусти `ANALYZE table_name`.
+  </ConceptCard>
+
+  <ConceptCard title="VACUUM" icon="RefreshCw">
+    Убирает мёртвые версии строк (tuple bloat), освобождает место для повторного использования и обновляет карту видимости. `autovacuum` делает это автоматически, но при массовых удалениях/обновлениях может не успевать — смотри `pg_stat_user_tables.n_dead_tup`. Признак проблемы: `n_dead_tup > 10% от n_live_tup` при регулярном autovacuum. `VACUUM FULL` возвращает место ОС, но берёт эксклюзивную блокировку — замени на `pg_repack` на проде.
+  </ConceptCard>
+
+  <ConceptCard title="Репликация" icon="Shuffle">
+    Streaming replication: primary шлёт WAL-поток на replica в режиме реального времени. Replica поднимается в hot standby — принимает READ-запросы. Replication slot гарантирует, что primary не удалит WAL до получения репликой — но если replica отстаёт, WAL растёт и диск переполняется. При failover слот нужно дропнуть руками: `SELECT pg_drop_replication_slot('slot_name')`.
+  </ConceptCard>
+
+  <ConceptCard title="Партиционирование" icon="Layers">
+    `PARTITION BY RANGE (created_at)` — разбивает таблицу на дочерние по диапазону дат. Запрос с `WHERE created_at > '2024-01-01'` сканирует только нужные партиции (partition pruning). `PARTITION BY LIST (region)` — по значению. Практическая польза: удаление старых данных через `DROP TABLE partition_2022` мгновенно, вместо медленного `DELETE`. Индексы нужно создавать на каждой партиции отдельно.
+  </ConceptCard>
+</ConceptGrid>
+
+## Примеры
+
+**Таблица событий с партициями и индексами**
+
+```sql
+-- Секционированная таблица по месяцам
+CREATE TABLE events (
+    id          bigserial,
+    user_id     bigint       NOT NULL,
+    type        text         NOT NULL,
+    payload     jsonb,
+    created_at  timestamptz  NOT NULL DEFAULT now()
+) PARTITION BY RANGE (created_at);
+
+-- Партиции создаются заранее или скриптом
+CREATE TABLE events_2024_01 PARTITION OF events
+    FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
+
+CREATE TABLE events_2024_02 PARTITION OF events
+    FOR VALUES FROM ('2024-02-01') TO ('2024-03-01');
+
+-- B-tree для точечного поиска по user_id внутри временного окна
+CREATE INDEX CONCURRENTLY idx_events_user_created
+    ON events (user_id, created_at DESC);
+
+-- GIN для поиска по содержимому jsonb
+CREATE INDEX CONCURRENTLY idx_events_payload
+    ON events USING GIN (payload jsonb_path_ops);
+
+-- Partial index: только незакрытые события, занимает в 10x меньше
+CREATE INDEX CONCURRENTLY idx_events_open
+    ON events (user_id, created_at)
+    WHERE type != 'closed';
+```
+
+**EXPLAIN ANALYZE — диагностика медленного запроса**
+
+```sql
+-- Включаем расширенный вывод: буферы и формат
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT user_id, count(*) AS cnt
+FROM events
+WHERE created_at >= now() - interval '7 days'
+  AND type = 'purchase'
+GROUP BY user_id
+ORDER BY cnt DESC
+LIMIT 20;
+
+-- Что искать в выводе:
+--   Seq Scan on events  → индекс не используется, возможно нужен partial/составной
+--   Rows Removed by Filter: 980000  → фильтрует почти всё — плохой индекс или его нет
+--   Buffers: shared hit=12 read=4300  → много read = данные не в shared_buffers, холодный кеш
+--   actual rows=1 / estimated rows=5000  → статистика устарела, запусти ANALYZE events
+
+-- Обновить статистику без блокировки
+ANALYZE events;
+
+-- Посмотреть состояние bloat и autovacuum
+SELECT relname,
+       n_live_tup,
+       n_dead_tup,
+       round(n_dead_tup::numeric / nullif(n_live_tup, 0) * 100, 1) AS dead_pct,
+       last_autovacuum,
+       last_autoanalyze
+FROM pg_stat_user_tables
+WHERE schemaname = 'public'
+ORDER BY n_dead_tup DESC;
+```
+
+**Мониторинг: активные запросы, индексы, репликация**
+
+```sql
+-- Долгие активные запросы (> 5 секунд) — кандидаты на kill
+SELECT pid,
+       now() - pg_stat_activity.query_start AS duration,
+       query,
+       state
+FROM pg_stat_activity
+WHERE state != 'idle'
+  AND query_start < now() - interval '5 seconds'
+ORDER BY duration DESC;
+
+-- Убить зависший запрос (мягко, через cancel)
+SELECT pg_cancel_backend(pid);
+
+-- Посмотреть использование индексов: нулевой idx_scan → индекс мёртвый груз
+SELECT indexrelname,
+       idx_scan,
+       idx_tup_read,
+       idx_tup_fetch
+FROM pg_stat_user_indexes
+WHERE schemaname = 'public'
+ORDER BY idx_scan ASC;
+
+-- Слоты репликации — следи чтобы restart_lsn не отставал
+SELECT slot_name,
+       active,
+       pg_size_pretty(
+           pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)
+       ) AS lag
+FROM pg_replication_slots;
+```
+
+## Проверь себя
+
+<QuizCard
+  question="Ты создал составной индекс CREATE INDEX ON orders (status, created_at). Запрос WHERE created_at > '2024-01-01' работает медленно — Seq Scan. Почему индекс не используется?"
+  options={[
+    "Индекс по нескольким колонкам не работает для диапазонных запросов — нужен отдельный индекс по created_at",
+    "Планировщик оценил Seq Scan дешевле из-за низкой селективности created_at по сравнению со всей таблицей",
+    "PostgreSQL использует составной индекс только если в WHERE указаны все его колонки"
+  ]}
+  correct={0}
+  explanation="B-tree составной индекс (status, created_at) работает только если в условии присутствует крайняя левая колонка — status. Запрос без status не может использовать этот индекс: дерево отсортировано сначала по status, внутри — по created_at, и пройти только по created_at без знания status нельзя. Для запросов только по created_at нужен отдельный индекс."
+/>
