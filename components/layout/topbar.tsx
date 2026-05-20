@@ -28,33 +28,35 @@ export function Topbar({ topics, categories }: TopbarProps) {
   return (
     <>
       <header className={scrolled ? "topbar scrolled" : "topbar"} id="topbar">
-        <Link href="/" className="brand-sticker" aria-label="edu.ninitux">
-          <span className="star">★</span> edu.ninitux
-        </Link>
-        <a className="back" href="https://ninitux.com">
-          ←&nbsp;
-          <T ru="ninitux.com" en="ninitux.com" />
-        </a>
-        <nav className="nav" aria-label="primary">
-          <Link className="nl" href="/#cats">
-            <T ru="категории" en="categories" />
+        <div className="topbar-inner">
+          <Link href="/" className="brand-sticker" aria-label="edu.ninitux">
+            <span className="star">★</span> edu.ninitux
           </Link>
-          <Link className="nl" href="/#topics">
-            <T ru="темы" en="topics" />
-          </Link>
-          <Link className="nl" href="/devops/kubernetes">
-            <T ru="пример темы" en="example topic" />
-          </Link>
-          <LangToggle />
-        </nav>
-        <div className="nav-mobile">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Открыть меню"
-          >
-            ≡
-          </button>
+          <a className="back" href="https://ninitux.com">
+            ←&nbsp;
+            <T ru="ninitux.com" en="ninitux.com" />
+          </a>
+          <nav className="nav" aria-label="primary">
+            <Link className="nl" href="/#cats">
+              <T ru="категории" en="categories" />
+            </Link>
+            <Link className="nl" href="/#topics">
+              <T ru="темы" en="topics" />
+            </Link>
+            <Link className="nl" href="/devops/kubernetes">
+              <T ru="пример темы" en="example topic" />
+            </Link>
+            <LangToggle />
+          </nav>
+          <div className="nav-mobile">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Открыть меню"
+            >
+              ≡
+            </button>
+          </div>
         </div>
       </header>
       {drawerOpen && (

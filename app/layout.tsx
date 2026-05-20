@@ -91,9 +91,12 @@ export default async function RootLayout({
     <html lang="ru" data-lang="ru" suppressHydrationWarning className={fontVars}>
       <body>
         <LangProvider>
+          {/* Marquee and Topbar live OUTSIDE .wrap so their backgrounds stretch
+              edge-to-edge across the viewport. Each one centers its OWN content
+              via an internal .wrap. */}
           <Marquee />
+          <Topbar topics={topics} categories={CATEGORIES} />
           <div className="wrap">
-            <Topbar topics={topics} categories={CATEGORIES} />
             <main>{children}</main>
             <Footer />
           </div>

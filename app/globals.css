@@ -183,25 +183,37 @@ button {
 
 /* ─── TOP BAR ─── */
 
+/* The .topbar is the full-width block that handles sticky positioning and
+   carries the cream background that hides scrolling content behind it. Inner
+   content is centered to 1240px via .topbar-inner. */
 .topbar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 18px 0 14px;
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.04em;
   position: sticky;
   top: 0;
   z-index: 20;
   background: var(--cream);
   border-bottom: 1px solid transparent;
   transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
 }
 
 .topbar.scrolled {
   border-bottom-color: var(--ink);
   box-shadow: 0 4px 0 var(--blue);
+}
+
+.topbar-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 18px 28px 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+@media (max-width: 980px) {
+  .topbar-inner { padding-inline: 18px; }
 }
 
 .brand-sticker {
