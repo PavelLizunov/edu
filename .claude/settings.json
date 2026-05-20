@@ -1,0 +1,72 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(rm -rf*)",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"rm -rf заблокирован — используй точечное удаление\"}}' && exit 2"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd $CLAUDE_PROJECT_DIR && [ -f package.json ] && bun run lint --quiet 2>&1 | tail -30 || true"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(bun *)",
+      "Bash(bunx *)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git checkout*)",
+      "Bash(git branch*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git restore*)",
+      "Bash(git stash*)",
+      "Bash(git rev-parse*)",
+      "Bash(node --version)",
+      "Bash(bun --version)",
+      "Bash(docker compose config*)",
+      "Bash(ssh user@192.168.0.207 *)",
+      "Bash(ssh user@192.168.0.236 *)",
+      "Bash(rsync*)",
+      "Read",
+      "Glob",
+      "Grep",
+      "Write",
+      "Edit",
+      "WebFetch"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(curl*)",
+      "Bash(wget*)",
+      "Bash(docker compose up*)",
+      "Bash(docker compose down*)",
+      "Bash(docker compose restart*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Bash(rm -rf*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)"
+    ]
+  }
+}
