@@ -16,6 +16,9 @@ export function ConceptCard({
   badge,
   children,
 }: ConceptCardProps) {
+  // `<div>` not `<p>` because MDX may wrap the body content in <p> itself, and
+  // nesting <p> inside <p> is invalid HTML — browsers auto-close the outer one,
+  // which causes a hydration mismatch (React error #418).
   return (
     <article className="concept">
       <span className="badge">{badge ?? title}</span>
@@ -23,7 +26,7 @@ export function ConceptCard({
         <Icon name={icon} />
       </span>
       <h3>{title}</h3>
-      <p>{children}</p>
+      <div className="concept-desc">{children}</div>
     </article>
   );
 }

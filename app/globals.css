@@ -26,7 +26,11 @@
   --mono:    var(--font-mono-loaded, "JetBrains Mono"), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
-/* ─── Tailwind theme bridge (for any utility-class usage) ─── */
+/* ─── Tailwind theme bridge + animations ───
+   Tailwind v4 only emits @keyframes into the bundle when they're referenced via
+   the @theme block (--animate-*). Defining @keyframes outside @theme can be
+   silently stripped during the build (tailwindlabs/tailwindcss#16192, #13458).
+   So all animations live inside @theme. */
 
 @theme inline {
   --color-background: var(--cream);
@@ -40,6 +44,18 @@
   --color-border: var(--ink);
   --font-sans: var(--sans);
   --font-mono: var(--mono);
+
+  --animate-marquee: marquee-scroll 40s linear infinite;
+  --animate-blink: hero-blink 1.4s steps(2, end) infinite;
+}
+
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes hero-blink {
+  50% { opacity: 0.35; }
 }
 
 /* ─── Base ─── */
@@ -70,7 +86,10 @@ body {
     radial-gradient(circle at 50% 100%, rgba(200, 255, 61, 0.08), transparent 40%),
     var(--cream);
   background-attachment: fixed;
-  overflow-x: hidden;
+  /* `overflow-x: clip` hides horizontal overflow WITHOUT creating a new scroll
+     container, so `position: sticky` on the topbar keeps sticking to the
+     viewport. `overflow-x: hidden` would have broken it. */
+  overflow-x: clip;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -99,11 +118,14 @@ button {
   font-family: inherit;
 }
 
+/* Reduce-motion: kill hover transitions and the blinking eyebrow dot, but keep
+   the horizontal text marquee (slow linear scroll is considered safe for
+   vestibular sensitivity and is core to the design). */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     transition-duration: 0ms !important;
-    animation-duration: 0ms !important;
   }
+  .hero .eyebrow .ico { animation: none; }
 }
 
 .wrap {
@@ -139,7 +161,8 @@ button {
 .marquee .track {
   display: inline-flex;
   gap: 32px;
-  animation: marquee-scroll 40s linear infinite;
+  /* Use the @theme-emitted animation token so Tailwind keeps the keyframes. */
+  animation: var(--animate-marquee);
   padding-right: 32px;
   will-change: transform;
 }
@@ -154,15 +177,9 @@ button {
   color: var(--pink);
 }
 
-@keyframes marquee-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .marquee .track { animation: none; }
-  .marquee        { justify-content: center; }
-}
+/* Note: intentionally NOT stopping the marquee under reduce-motion. A slow
+   linear horizontal text scroll is generally safe for vestibular users (unlike
+   parallax, scale, or rotation) and removing it loses the design's identity. */
 
 /* ─── TOP BAR ─── */
 
@@ -360,12 +377,8 @@ button {
   height: 9px;
   background: var(--lime);
   border-radius: 50%;
-  animation: hero-blink 1.4s steps(2) infinite;
+  animation: var(--animate-blink);
   display: inline-block;
-}
-
-@keyframes hero-blink {
-  50% { opacity: 0.35; }
 }
 
 .hero h1 {
@@ -686,7 +699,9 @@ button {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-mute);
+  /* --ink-2 not --ink-mute: on pastel backgrounds (yellow/sky/lime/peach/mint)
+     the lighter ink-mute fails WCAG AA 4.5:1. */
+  color: var(--ink-2);
   display: flex;
   gap: 10px;
   align-items: center;
@@ -720,7 +735,7 @@ button {
 .topic-card.t-2 { grid-column: span 6; background: var(--pink); color: var(--cream); }
 .topic-card.t-2 .name,
 .topic-card.t-2 .desc { color: var(--cream); }
-.topic-card.t-2 .meta { color: rgba(255, 255, 255, 0.75); }
+.topic-card.t-2 .meta { color: rgba(255, 255, 255, 0.95); }
 .topic-card.t-2 .meta b { color: var(--lime); }
 .topic-card.t-2 .name .hash { color: var(--yellow); }
 .topic-card.t-2 .sticker { background: var(--lime); color: var(--ink); }
@@ -734,7 +749,7 @@ button {
 .topic-card.t-5 { grid-column: span 4; background: var(--purple); color: var(--cream); }
 .topic-card.t-5 .name,
 .topic-card.t-5 .desc { color: var(--cream); }
-.topic-card.t-5 .meta { color: rgba(255, 255, 255, 0.75); }
+.topic-card.t-5 .meta { color: rgba(255, 255, 255, 0.95); }
 .topic-card.t-5 .meta b { color: var(--yellow); }
 .topic-card.t-5 .name .hash { color: var(--lime); }
 .topic-card.t-5 .sticker { background: var(--yellow); color: var(--ink); }
@@ -743,7 +758,7 @@ button {
 .topic-card.t-6 .name,
 .topic-card.t-6 .desc { color: var(--cream); }
 .topic-card.t-6 .name .hash { color: var(--lime); }
-.topic-card.t-6 .meta { color: rgba(255, 255, 255, 0.75); }
+.topic-card.t-6 .meta { color: rgba(255, 255, 255, 0.95); }
 .topic-card.t-6 .meta b { color: var(--yellow); }
 .topic-card.t-6 .sticker { background: var(--pink); color: var(--cream); }
 .topic-card.t-6:hover { background: var(--ink-2); }
@@ -1009,11 +1024,28 @@ button {
   color: var(--ink);
 }
 
-.concept p {
+.concept .concept-desc {
   margin: 0;
   font-size: 14.5px;
   color: var(--ink-2);
   line-height: 1.5;
+}
+
+.concept .concept-desc p {
+  margin: 0;
+  font-size: inherit;
+  color: inherit;
+  line-height: inherit;
+}
+
+.concept .concept-desc code {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  padding: 0 5px;
+  border-radius: 4px;
+  color: var(--ink);
 }
 
 .concept .badge {
@@ -1047,13 +1079,13 @@ button {
 
 .concept-grid .concept:nth-of-type(6n+5) { background: var(--pink); color: var(--cream); }
 .concept-grid .concept:nth-of-type(6n+5) h3,
-.concept-grid .concept:nth-of-type(6n+5) p { color: var(--cream); }
+.concept-grid .concept:nth-of-type(6n+5) .concept-desc { color: var(--cream); }
 .concept-grid .concept:nth-of-type(6n+5) .ico { background: var(--cream); }
 .concept-grid .concept:nth-of-type(6n+5) .badge { background: var(--lime); color: var(--ink); }
 
 .concept-grid .concept:nth-of-type(6n+6) { background: var(--purple); color: var(--cream); }
 .concept-grid .concept:nth-of-type(6n+6) h3,
-.concept-grid .concept:nth-of-type(6n+6) p { color: var(--cream); }
+.concept-grid .concept:nth-of-type(6n+6) .concept-desc { color: var(--cream); }
 .concept-grid .concept:nth-of-type(6n+6) .ico { background: var(--cream); }
 .concept-grid .concept:nth-of-type(6n+6) .badge { background: var(--yellow); color: var(--ink); }
 
@@ -1404,7 +1436,7 @@ footer.bigfoot .cols {
   font-size: 13px;
 }
 
-footer.bigfoot .cols h5 {
+footer.bigfoot .cols h4 {
   font-family: var(--mono);
   font-weight: 700;
   font-size: 11px;
