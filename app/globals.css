@@ -19,10 +19,11 @@
   --ink-mute: #6B6557;
   --ink-dim:  #9B947F;
 
-  /* Font CSS variables come from next/font/google in app/layout.tsx */
-  --sans:    var(--font-space-grotesk, "Space Grotesk"), var(--font-bricolage, "Bricolage Grotesque"), system-ui, -apple-system, sans-serif;
-  --display: var(--font-bricolage, "Bricolage Grotesque"), var(--font-space-grotesk, "Space Grotesk"), system-ui, sans-serif;
-  --mono:    var(--font-space-mono, "Space Mono"), ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  /* Font CSS variables come from next/font/google in app/layout.tsx.
+     Все три шрифта подгружают subset cyrillic. */
+  --sans:    var(--font-sans-loaded, "Manrope"), var(--font-display, "Unbounded"), system-ui, -apple-system, sans-serif;
+  --display: var(--font-display, "Unbounded"), var(--font-sans-loaded, "Manrope"), system-ui, sans-serif;
+  --mono:    var(--font-mono-loaded, "JetBrains Mono"), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 /* ─── Tailwind theme bridge (for any utility-class usage) ─── */

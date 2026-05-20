@@ -45,15 +45,15 @@ export default async function HomePage() {
         <p className="lede">
           <span data-i18n="ru">
             Восемь DevOps-тем.{" "}
-            <b>Аналогии → концепции → рабочие команды → проверка себя.</b> Без
-            воды, без маркетинга, без stock-фото. Сделано для тех кто читает{" "}
-            <code>man</code>, а не блоги.
+            <b>Аналогии → концепции → рабочие команды → проверка себя.</b>{" "}
+            Личный конспект — собирал пока сестра готовилась к собесу, лежит
+            открыто на случай если кому-то ещё пригодится.
           </span>
           <span data-i18n="en">
             Eight DevOps topics.{" "}
-            <b>Analogies → concepts → working commands → self-check.</b> No
-            water, no marketing, no stock photos. Made for people who read{" "}
-            <code>man</code>, not blogs.
+            <b>Analogies → concepts → working commands → self-check.</b>{" "}
+            Personal notes I put together while my sister was prepping for
+            interviews — kept open in case it helps someone else.
           </span>
         </p>
 

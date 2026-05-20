@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Space_Grotesk, Space_Mono } from "next/font/google";
+import { Unbounded, Manrope, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { LangProvider } from "@/components/i18n/lang-provider";
 import { Marquee } from "@/components/layout/marquee";
@@ -9,26 +9,25 @@ import { getAllTopics } from "@/lib/content";
 import { CATEGORIES } from "@/lib/categories";
 
 // Self-hosted by next/font at build time — no runtime CDN.
-// Note: Bricolage/Space Grotesk/Space Mono on Google Fonts ship Latin only.
-// Russian glyphs fall through to system-ui via the CSS variable stack in globals.css.
-const bricolage = Bricolage_Grotesque({
-  subsets: ["latin", "latin-ext"],
+// Все три шрифта имеют кириллицу (важно для русского контента).
+const unbounded = Unbounded({
+  subsets: ["latin", "latin-ext", "cyrillic"],
   weight: ["500", "700", "800"],
-  variable: "--font-bricolage",
+  variable: "--font-display",
   display: "swap",
 });
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin", "latin-ext"],
+const manrope = Manrope({
+  subsets: ["latin", "latin-ext", "cyrillic"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-space-grotesk",
+  variable: "--font-sans-loaded",
   display: "swap",
 });
 
-const spaceMono = Space_Mono({
-  subsets: ["latin"],
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin", "latin-ext", "cyrillic"],
   weight: ["400", "700"],
-  variable: "--font-space-mono",
+  variable: "--font-mono-loaded",
   display: "swap",
 });
 
@@ -39,7 +38,7 @@ export const metadata: Metadata = {
     template: "%s ★ edu.ninitux",
   },
   description:
-    "Шпаргалка для инженеров уровня Middle+: аналогии → концепции → рабочие команды → проверка себя. DevOps, без воды.",
+    "Шпаргалка для инженеров уровня Middle+: аналогии → концепции → рабочие команды → проверка себя. Личный конспект по DevOps.",
   applicationName: "edu.ninitux",
   authors: [{ name: "Pavel Lizunov", url: "https://ninitux.com" }],
   keywords: [
@@ -58,7 +57,7 @@ export const metadata: Metadata = {
     siteName: "edu.ninitux",
     title: "edu.ninitux ★ Шпаргалка инженера",
     description:
-      "Аналогии → концепции → рабочие команды → проверка. Без воды.",
+      "Аналогии → концепции → рабочие команды → проверка. Личный конспект.",
     url: "https://edu.ninitux.com",
     locale: "ru_RU",
   },
@@ -66,7 +65,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "edu.ninitux",
     description:
-      "Аналогии → концепции → рабочие команды → проверка. Без воды.",
+      "Аналогии → концепции → рабочие команды → проверка. Личный конспект.",
   },
   robots: {
     index: true,
@@ -86,7 +85,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const topics = await getAllTopics();
-  const fontVars = `${bricolage.variable} ${spaceGrotesk.variable} ${spaceMono.variable}`;
+  const fontVars = `${unbounded.variable} ${manrope.variable} ${jetbrainsMono.variable}`;
 
   return (
     <html lang="ru" data-lang="ru" suppressHydrationWarning className={fontVars}>

@@ -7,7 +7,7 @@ const ITEMS = [
     ru: "аналогии → концепции → команды → квиз",
     en: "analogies → concepts → commands → quiz",
   },
-  { ru: "без воды, без маркетинга", en: "no water · no marketing" },
+  { ru: "личный конспект, лежит открыто", en: "personal notes, kept open" },
   { ru: "часть ninitux.com", en: "part of ninitux.com" },
 ];
 
