@@ -33,10 +33,10 @@ flowchart TB
   BROWSER -.->|"проверяет цепочку"| INT
   BROWSER -.->|"валидирует leaf"| LEAF
 
-  style ROOT fill:#4a1942,color:#fff
-  style INT fill:#1a3a4a,color:#fff
-  style LEAF fill:#1a4a2a,color:#fff
-  style BROWSER fill:#3a3a1a,color:#fff
+  style ROOT fill:#B68CFF,stroke:#0A0907,color:#FFFBEC
+  style INT fill:#2D5BFF,stroke:#0A0907,color:#FFFBEC
+  style LEAF fill:#C8FF3D,stroke:#0A0907,color:#0A0907
+  style BROWSER fill:#FFE600,stroke:#0A0907,color:#0A0907
 `} />
 
 Браузер доверяет Root CA из встроенного хранилища (в macOS — Keychain, в Android — свой список, чуть строже). Промежуточный CA живёт онлайн и выдаёт реальные сертификаты — если он скомпрометирован, его отзывают не трогая Root. Сервер должен отдавать leaf + все intermediate в цепочке; Root браузер знает сам.

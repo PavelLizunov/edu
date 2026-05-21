@@ -122,15 +122,15 @@ flowchart TD
 
   L1 --> L2 --> L3 --> L4 --> L5 --> L6
 
-  style L1 fill:#1e3a2f,color:#a3e6c3
-  style L2 fill:#1e3a2f,color:#a3e6c3
-  style L3 fill:#1e3a2f,color:#a3e6c3
-  style L4 fill:#3a2a1e,color:#e6c3a3
-  style L5 fill:#3a2a1e,color:#e6c3a3
-  style L6 fill:#2a1e3a,color:#c3a3e6
+  style L1 fill:#C8FF3D,stroke:#0A0907,color:#0A0907
+  style L2 fill:#C8FF3D,stroke:#0A0907,color:#0A0907
+  style L3 fill:#C8FF3D,stroke:#0A0907,color:#0A0907
+  style L4 fill:#FF3E8E,stroke:#0A0907,color:#FFFBEC
+  style L5 fill:#FF3E8E,stroke:#0A0907,color:#FFFBEC
+  style L6 fill:#9DE7FF,stroke:#0A0907,color:#0A0907
 `} />
 
-Зелёные слои — стабильны, кешируются на CI. Оранжевые — инвалидируются при каждом изменении исходников. Именно поэтому `COPY package.json` всегда идёт до `COPY .`.
+Лаймовые слои — стабильны, кешируются на CI. Розовые — инвалидируются при каждом изменении исходников. Голубой `CMD` — метаданные, не создаёт слой с данными. Именно поэтому `COPY package.json` всегда идёт до `COPY .`.
 
 ## Примеры
 
