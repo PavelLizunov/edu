@@ -12,12 +12,19 @@ const ITEMS = [
 ];
 
 export function Marquee() {
-  // Duplicate items so the animation loops seamlessly at -50% translateX.
-  const doubled = [...ITEMS, ...ITEMS];
+  // For a seamless `translateX(-50%)` loop, the "first half" of the track must
+  // be at least viewport-wide — otherwise the right edge of the track scrolls
+  // into view as empty space before the animation wraps.
+  // With 5 unique short items the doubled track is only ~2430px wide
+  // (half = 1215px), which leaves a gap on every viewport > 1215px.
+  // Repeating ×6 instead of ×2 gives ~7300px total / 3650px half — covers up
+  // to QHD (2560px) comfortably and only loses a sliver on 4K.
+  const REPEAT = 6;
+  const tracked = Array.from({ length: REPEAT }, () => ITEMS).flat();
   return (
     <div className="marquee" aria-hidden="true">
       <div className="track">
-        {doubled.map((item, idx) => (
+        {tracked.map((item, idx) => (
           <span key={idx}>
             <span className="dot">●</span> <T ru={item.ru} en={item.en} />
           </span>

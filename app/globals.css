@@ -45,7 +45,10 @@
   --font-sans: var(--sans);
   --font-mono: var(--mono);
 
-  --animate-marquee: marquee-scroll 40s linear infinite;
+  /* Duration scales with track width (we repeat the 5-item base 6× = 30 items)
+     so the half-cycle is ~3650px. At 90s linear that's ~40px/s, the same
+     readable cadence as the old 40s × 5-item config. */
+  --animate-marquee: marquee-scroll 90s linear infinite;
   --animate-blink: hero-blink 1.4s steps(2, end) infinite;
 }
 
