@@ -175,7 +175,45 @@ async function auditPage(page: Page, url: string, topic: string, viewport: strin
       }
     }
 
-    // 8. Sticker on each topic card on home (we're on topic page, skip)
+    // 8. Mermaid palette drift — any rendered node/actor fill outside v4 palette
+    //    catches MDX agents who wrote `style X fill:#muddycolor`. Caught the
+    //    ansible-docker dark-green and tls dark-purple bugs in production.
+    const V4 = new Set([
+      "#FFFBEC", "#FFF8DC", "#FFE600", "#FF3E8E",
+      "#C8FF3D", "#2D5BFF", "#FF3B1F", "#9DE7FF",
+      "#B68CFF", "#B7F0CC", "#FFC07A",
+      "#0A0907", "#2B261C", "#6B6557", "#9B947F",
+      "#FFFFFF", "#000000",
+    ]);
+    function toHex(rgb: string): string | null {
+      const m = (rgb || "").match(/(\d+)/g);
+      if (!m) return null;
+      return (
+        "#" +
+        m
+          .slice(0, 3)
+          .map((n) => Number(n).toString(16).padStart(2, "0").toUpperCase())
+          .join("")
+      );
+    }
+    const seen = new Set<string>();
+    for (const svg of Array.from(document.querySelectorAll(".diagram-mermaid svg"))) {
+      const shapes = svg.querySelectorAll(
+        ".node rect, .node polygon, .node circle, .node path, .actor rect, rect.actor"
+      );
+      for (const sh of Array.from(shapes)) {
+        const fill = getComputedStyle(sh as Element).fill;
+        if (!fill || fill === "none" || fill === "transparent") continue;
+        const hex = toHex(fill);
+        if (!hex || V4.has(hex)) continue;
+        if (seen.has(hex)) continue;
+        seen.add(hex);
+        out.push({
+          category: "palette-drift",
+          detail: `mermaid <${sh.tagName}> fill=${hex} (not in v4 palette)`,
+        });
+      }
+    }
 
     return out;
   });
