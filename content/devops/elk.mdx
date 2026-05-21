@@ -8,61 +8,105 @@ tags: ["elasticsearch", "logstash", "kibana", "filebeat", "grok", "logs"]
 description: "Elasticsearch + Logstash + Kibana: индексация и поиск по логам"
 ---
 
+## Зачем это вообще
+
+`grep` и `tail -f` перестают работать когда логи пишут 50 серверов и 100 GB в сутки: ты физически не можешь открыть ssh на каждую машину, а файлы ротируются раньше, чем ты найдёшь нужный момент. ELK Stack собирает логи централизованно, разбирает строки на структурированные поля, хранит с retention-политикой и даёт полнотекстовый поиск за миллисекунды — по индексу, а не сканированием файлов.
+
 ## Аналогия
 
 <AnalogyBox>
-Представь архив с миллионами писем. Курьер (Filebeat) собирает конверты с разных этажей и
-передаёт секретарю (Logstash), который вскрывает каждый конверт, достаёт нужные поля —
-дату, отправителя, тему — и раскладывает карточки по ящикам картотеки (Elasticsearch).
-Когда нужно что-то найти, открываешь каталог (Kibana) и за секунды получаешь все письма
-от Ивана за прошлый вторник с пометкой «срочно».
+Elasticsearch — как картотека в библиотеке: каждый лог разбирается на отдельные слова, и для каждого слова создаётся карточка «вот в каких документах оно встречается». Когда ищешь по слову — идёшь в картотеку, а не листаешь все книги подряд. <b>Шард</b> — это отдельный шкаф со своей картотекой, их можно поставить в разные комнаты (ноды). <b>Filebeat</b> — курьер на каждом этаже: забирает конверты (строки логов) и несёт в <b>Logstash</b> — секретаря, который вскрывает каждый конверт и раскладывает по нужным полям перед тем как положить в шкаф.
 </AnalogyBox>
+
+## Картина мира
+
+<MermaidDiagram label="app logs → Filebeat → Logstash → Elasticsearch → Kibana" code={`
+flowchart LR
+  APP([app<br/>/var/log]) -->|tail файлов| FB[Filebeat<br/>лёгкий shipper<br/>на каждом хосте]
+  FB -->|Beats protocol<br/>5044| LS[Logstash<br/>grok + geoip<br/>mutate + drop]
+  LS -->|HTTP bulk API<br/>9200| ES[(Elasticsearch<br/>cluster<br/>шарды + replicas)]
+  ES -->|поиск + агрегации| KB[Kibana<br/>Discover<br/>Dashboards<br/>Alerts]
+  ES -.->|ILM<br/>hot→warm→cold→delete| ES
+`} />
+
+Logstash — единственный «тяжёлый» компонент: он трансформирует, обогащает и фильтрует. Filebeat намеренно лёгкий (< 50 MB RAM) — ставится на каждый сервер-источник. Elasticsearch держит данные в шардах, распределённых по нодам кластера.
 
 ## Ключевые концепции
 
 <ConceptGrid>
-  <ConceptCard title="Поток данных" icon="Workflow">
-    Filebeat читает файлы логов и отправляет строки в Logstash. Logstash парсит, трансформирует и
-    пишет в Elasticsearch. Kibana читает оттуда. Filebeat можно заменить на Fluentd или Vector —
-    Logstash не обязателен если логи уже структурированы JSON.
+  <ConceptCard title="Beats / Filebeat" icon="Plug">
+    Семейство лёгких shippers: Filebeat (файлы), Metricbeat (метрики), Packetbeat (сеть).
+    Filebeat читает файл как `tail -F`, запоминает позицию в registry, при рестарте продолжает
+    с той же строки. Потребляет ~30–50 MB RAM — можно ставить везде без страха.
+  </ConceptCard>
+
+  <ConceptCard title="Logstash pipeline" icon="Workflow">
+    Три секции: `input` (источник) → `filter` (трансформация) → `output` (куда писать).
+    Тяжёлый: запускается на JVM, требует 512 MB+ RAM. Оправдан когда нужен grok, geoip, mutate,
+    throttle, aggregate. Если логи уже JSON — можно писать Filebeat прямо в ES, минуя Logstash.
   </ConceptCard>
 
   <ConceptCard title="Index и Shard" icon="Database">
-    Index — это именованное хранилище документов (аналог таблицы). Внутри он делится на шарды:
-    primary-шард хранит данные, replica-шард — копия на другой ноде. Один индекс с одним шардом
-    не масштабируется горизонтально — все запросы идут в одну точку.
-  </ConceptCard>
-
-  <ConceptCard title="Grok pattern" icon="Search">
-    Регулярки с именованными группами для парсинга неструктурированного текста в поля.
-    `%{IP:client} %{WORD:method} %{URIPATHPARAM:request}` превращает строку nginx access-лога
-    в объект `{client: "1.2.3.4", method: "GET", request: "/api/v1"}`. Дебажь в Kibana Dev Tools → Grok Debugger.
+    Index — логическое хранилище документов, например `nginx-2026.05.20`. Внутри делится на
+    primary-шарды (данные) и replica-шарды (копии на других нодах). Шард — минимальная единица
+    параллелизма: 1 шард на 1 ноде, разбить нельзя. Слишком много мелких шардов убивает
+    cluster state — держи &lt; 30 шардов на ноду.
   </ConceptCard>
 
   <ConceptCard title="Mapping" icon="ListTree">
-    Схема типов полей в индексе. `keyword` — точное совпадение и агрегации, `text` — полнотекстовый поиск.
-    Если поле `user_id` пришло сначала числом а потом строкой — Elasticsearch бросит ошибку mapping conflict
-    и документ потеряется. Dynamic mapping удобен на старте, но на проде фиксируй явно.
+    Схема типов полей: `keyword` (точное совпадение, агрегации), `text` (полнотекстовый поиск
+    с токенизацией), `ip`, `date`, `integer`. Mapping immutable — создал `message: text`,
+    а нужен `keyword`? Придётся reindex. Dynamic mapping удобен при разработке, на проде
+    фиксируй через index template.
   </ConceptCard>
 
-  <ConceptCard title="ILM — retention политика" icon="Archive">
-    Index Lifecycle Management автоматически управляет жизнью индекса: hot (запись+чтение) →
-    warm (только чтение, сжатие) → cold (дешёвое хранилище) → delete. Rollover по размеру
-    (`max_size: 50gb`) или времени (`max_age: 1d`) — иначе один индекс распухнет до размера,
-    с которым никакой кластер не справится.
+  <ConceptCard title="Grok pattern" icon="Search">
+    DSL для парсинга строк регулярками: `%{IP:client} %{WORD:method} %{NUMBER:status:int}`
+    превращает строку nginx access-лога в структурированные поля. Сотни встроенных паттернов
+    (HTTPDATE, URIPATHPARAM, COMMONAPACHELOG). Дебажь в Kibana → Dev Tools → Grok Debugger
+    — не трать время на ручной перебор регулярок.
   </ConceptCard>
 
-  <ConceptCard title="Kibana: Discover и KQL" icon="Filter">
-    Discover — живой поиск по индексу. KQL (Kibana Query Language) лаконичнее чем Lucene:
-    `status:5* AND method:POST AND duration>1000`. Lens строит графики drag-and-drop.
-    Dashboards собираются из визуализаций и обновляются по расписанию. Alerts — правило
-    срабатывает когда условие выполнено N раз за M минут.
+  <ConceptCard title="ILM — жизненный цикл индекса" icon="Archive">
+    Index Lifecycle Management переводит индекс по фазам: hot (запись + чтение, rollover по
+    размеру/времени) → warm (только чтение, shrink + forcemerge) → cold (дешёвое хранилище) →
+    delete. Без ILM один индекс растёт вечно — reindex становится проблемой на терабайтах.
+  </ConceptCard>
+
+  <ConceptCard title="KQL — поиск в Kibana" icon="Filter">
+    Kibana Query Language: `status:5* AND method:POST AND duration>1000`. Проще Lucene-синтаксиса.
+    `NOT _exists_:error_code` — документы без поля. Wildcards: `host:web-*`. Range: `bytes:[1000 TO *]`.
+    В Lens и Dashboard KQL работает как фильтр — можно темплейтить по переменным.
+  </ConceptCard>
+
+  <ConceptCard title="Security и roles" icon="ShieldCheck">
+    С версии 8.x security включён по умолчанию (TLS между нодами, аутентификация).
+    Не отключай через `xpack.security.enabled: false` — это открывает кластер наружу без пароля.
+    Роли: `kibana_admin`, `viewer`, `logstash_writer` — минимальные привилегии.
+    Пароль для built-in пользователей задаётся через `elasticsearch-setup-passwords auto`.
   </ConceptCard>
 </ConceptGrid>
 
+## Жизненный цикл лога
+
+<MermaidDiagram label="путь строки лога от файла до Kibana и ILM" code={`
+flowchart TD
+  A([nginx пишет в<br/>/var/log/nginx/access.log]) --> B
+  B[Filebeat tails файл<br/>запоминает offset в registry] --> C
+  C[Logstash: grok<br/>парсит message на поля<br/>client_ip, method, status...] --> D
+  D[Logstash: geoip<br/>enrich client_ip → страна/город] --> E
+  E[Logstash output<br/>bulk POST в nginx-2026.05.20] --> F
+  F[(Elasticsearch<br/>indexing: инвертированный индекс<br/>по каждому полю)] --> G
+  G{ILM check<br/>раз в 10 минут}
+  G -- rollover > 50GB или > 1d --> H[новый индекс<br/>nginx-2026.05.21]
+  G -- возраст > 30d --> I[delete фаза<br/>индекс удалён]
+  F --> J[KQL запрос<br/>status:5* AND duration>1000]
+  J --> K([Kibana Discover<br/>результат за < 1s])
+`} />
+
 ## Примеры
 
-**filebeat.yml — читаем nginx-логи, шлём в Logstash**
+**filebeat.yml — читаем nginx-логи, мультилайн для java стектрейсов, шлём в Logstash**
 
 ```yaml
 filebeat.inputs:
@@ -70,71 +114,85 @@ filebeat.inputs:
     enabled: true
     paths:
       - /var/log/nginx/*.log
-    # Тег помогает в Logstash фильтровать источник
-    tags: ["nginx"]
-    # Multiline: если строка не начинается с IP — склеиваем с предыдущей (стектрейсы)
-    multiline.pattern: '^\d+\.\d+\.\d+\.\d+'
+    tags: ["nginx"]   # по тегу Logstash поймёт какой grok применять
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/app/*.log
+    tags: ["java-app"]
+    # Java стектрейсы: строка НЕ начинается с даты → склеиваем с предыдущей
+    multiline.pattern: '^\d{4}-\d{2}-\d{2}'
     multiline.negate: true
     multiline.match: after
+    multiline.max_lines: 100   # защита от бесконечного склеивания
 
 output.logstash:
   hosts: ["logstash:5044"]
+  # TLS к Logstash (рекомендован в проде)
+  ssl.certificate_authorities: ["/etc/filebeat/ca.crt"]
 
-# Не шли статистику самого Filebeat в тот же индекс
+# Не шли внутренние метрики Filebeat в тот же кластер — они шумят
 monitoring.enabled: false
 ```
 
-**logstash/pipeline/nginx.conf — grok + enrichment**
+**logstash/pipeline/nginx.conf — grok + date + geoip → Elasticsearch**
 
 ```text
 input {
   beats {
     port => 5044
+    ssl  => true
+    ssl_certificate => "/etc/logstash/logstash.crt"
+    ssl_key         => "/etc/logstash/logstash.key"
   }
 }
 
 filter {
-  # Парсим только nginx-события
   if "nginx" in [tags] {
     grok {
       match => {
-        "message" => '%{IPORHOST:client_ip} - %{DATA:user} \[%{HTTPDATE:timestamp}\] "%{WORD:method} %{URIPATHPARAM:request} HTTP/%{NUMBER:http_version}" %{NUMBER:status:int} %{NUMBER:bytes:int} "%{DATA:referrer}" "%{DATA:user_agent}"'
+        "message" => '%{IPORHOST:client_ip} - %{DATA:user} \[%{HTTPDATE:log_timestamp}\] "%{WORD:method} %{URIPATHPARAM:request} HTTP/%{NUMBER:http_version}" %{NUMBER:status:int} %{NUMBER:bytes:int} "%{DATA:referrer}" "%{DATA:user_agent}"'
       }
-      # Если не распарсилось — помечаем, не теряем документ
+      # Не теряем документ при фейле — помечаем и всё равно пишем
       tag_on_failure => ["_grok_failure"]
     }
 
-    # Конвертируем timestamp в @timestamp Elasticsearch
     date {
-      match => ["timestamp", "dd/MMM/yyyy:HH:mm:ss Z"]
+      match => ["log_timestamp", "dd/MMM/yyyy:HH:mm:ss Z"]
       target => "@timestamp"
-      remove_field => ["timestamp"]
+      remove_field => ["log_timestamp"]   # убираем дубль
     }
 
-    # Обогащаем GeoIP (требует плагин logstash-filter-geoip)
     geoip {
       source => "client_ip"
       target => "geoip"
+      # fields — только то что нужно, не тащи всё
+      fields => ["city_name", "country_code2", "location"]
+    }
+
+    # Удаляем сырое сообщение после успешного парсинга — экономим место
+    if "_grok_failure" not in [tags] {
+      mutate { remove_field => ["message"] }
     }
   }
 }
 
 output {
   elasticsearch {
-    hosts => ["http://elasticsearch:9200"]
-    # Индекс по дате — каждый день новый индекс, ILM обрежет старые
-    index => "nginx-%{+yyyy.MM.dd}"
-    # Учётка если включён security
-    user => "logstash_writer"
+    hosts    => ["https://elasticsearch:9200"]
+    index    => "nginx-%{+yyyy.MM.dd}"
+    user     => "logstash_writer"
     password => "${LOGSTASH_ES_PASSWORD}"
+    ssl_certificate_verification => true
+    cacert   => "/etc/logstash/ca.crt"
   }
 }
 ```
 
-**Elasticsearch: ILM-политика + index template (API)**
+**ILM-политика + index template с явным mapping**
 
 ```json
-# Создаём ILM-политику: горячая → тёплая → удаление
 PUT _ilm/policy/nginx-logs-policy
 {
   "policy": {
@@ -143,63 +201,220 @@ PUT _ilm/policy/nginx-logs-policy
         "actions": {
           "rollover": {
             "max_size": "50gb",
-            "max_age": "1d"
+            "max_age":  "1d"
           }
         }
       },
       "warm": {
         "min_age": "3d",
         "actions": {
-          "shrink": { "number_of_shards": 1 },
+          "shrink":     { "number_of_shards": 1 },
           "forcemerge": { "max_num_segments": 1 }
         }
       },
       "delete": {
         "min_age": "30d",
-        "actions": {
-          "delete": {}
-        }
+        "actions": { "delete": {} }
       }
     }
   }
 }
 
-# Index template: mapping + ILM привязка для всех nginx-* индексов
 PUT _index_template/nginx-logs-template
 {
   "index_patterns": ["nginx-*"],
   "template": {
     "settings": {
-      "number_of_shards": 3,
+      "number_of_shards":   3,
       "number_of_replicas": 1,
-      "index.lifecycle.name": "nginx-logs-policy",
-      "index.lifecycle.rollover_alias": "nginx"
+      "index.lifecycle.name":             "nginx-logs-policy",
+      "index.lifecycle.rollover_alias":   "nginx"
     },
     "mappings": {
+      "dynamic": "strict",
       "properties": {
-        "@timestamp":   { "type": "date" },
-        "client_ip":    { "type": "ip" },
-        "method":       { "type": "keyword" },
-        "request":      { "type": "keyword" },
-        "status":       { "type": "short" },
-        "bytes":        { "type": "integer" },
-        "user_agent":   { "type": "text" },
-        "referrer":     { "type": "keyword" }
+        "@timestamp": { "type": "date" },
+        "client_ip":  { "type": "ip" },
+        "method":     { "type": "keyword" },
+        "request":    { "type": "keyword" },
+        "status":     { "type": "short" },
+        "bytes":      { "type": "integer" },
+        "user_agent": { "type": "text", "fields": { "keyword": { "type": "keyword", "ignore_above": 512 } } },
+        "referrer":   { "type": "keyword" },
+        "geoip": {
+          "properties": {
+            "city_name":    { "type": "keyword" },
+            "country_code2":{ "type": "keyword" },
+            "location":     { "type": "geo_point" }
+          }
+        }
       }
     }
   }
 }
 ```
 
+**KQL-запросы в Kibana Discover**
+
+```text
+# Все 5xx от POST-запросов медленнее 1 секунды
+status:5* AND method:POST AND duration>1000
+
+# Конкретный IP за последние 30 минут (time filter отдельно в UI)
+client_ip:"203.0.113.42"
+
+# Документы где поле error_code вообще существует
+_exists_:error_code
+
+# Wildcard по хосту
+host.name:web-*
+
+# Диапазон байт
+bytes:[102400 TO *]
+
+# Поиск по geo — страна
+geoip.country_code2:CN AND status:4*
+```
+
+**curl против ES API — диагностика кластера**
+
+```bash
+# Состояние кластера (green / yellow / red)
+curl -s -u elastic:${ES_PASSWORD} \
+  https://localhost:9200/_cat/health?v
+
+# Индексы, отсортированные по размеру
+curl -s -u elastic:${ES_PASSWORD} \
+  "https://localhost:9200/_cat/indices?v&s=store.size:desc&h=index,health,pri,rep,docs.count,store.size"
+
+# Почему шарды unassigned — главный инструмент диагностики
+curl -s -u elastic:${ES_PASSWORD} \
+  https://localhost:9200/_cluster/allocation/explain | python3 -m json.tool
+
+# Поиск с body (последние 10 ошибок)
+curl -s -u elastic:${ES_PASSWORD} \
+  -H "Content-Type: application/json" \
+  https://localhost:9200/nginx-*/_search -d '{
+    "query": { "term": { "status": 500 } },
+    "sort":  [{ "@timestamp": "desc" }],
+    "size":  10
+  }' | python3 -m json.tool
+
+# Reindex из старого индекса в новый (например после изменения mapping)
+curl -s -u elastic:${ES_PASSWORD} \
+  -X POST -H "Content-Type: application/json" \
+  https://localhost:9200/_reindex -d '{
+    "source": { "index": "nginx-old" },
+    "dest":   { "index": "nginx-new" }
+  }'
+```
+
+## Грабли
+
+<ul className="pitfalls">
+<li>**Dynamic mapping взрывает схему** — поле `user_id` пришло числом, потом той же строкой пришла строка `"anon"` → ES отвергает документ с ошибкой mapping conflict. На проде ставь `"dynamic": "strict"` в template и явно описывай все поля.</li>
+<li>**Слишком много мелких шардов** — один шард потребляет ~30 MB кучи на JVM. Кластер из 3 нод с 1000 индексами по 5 шардов = 5000 шардов = ~150 GB только под управление. Правило: &lt; 30 шардов на 1 GB heap ноды. Используй rollover + ILM вместо ежедневных ручных индексов.</li>
+<li>**Mapping immutable после создания** — создал `message: text`, а нужен `keyword` для term-запросов? `term` вернёт пустой результат потому что text-поле токенизируется. Нужна связка `text` + `keyword` subfield или полный reindex.</li>
+<li>**ILM rollover alias не создан** — Logstash пишет в `nginx-2026.05.20` напрямую, а не через alias `nginx`. ILM не видит индекс через alias и rollover никогда не срабатывает. Один индекс растёт бесконечно.</li>
+<li>**Стектрейсы без multiline в Filebeat** — каждая строка Java exception = отдельный документ в ES. Grok не парсит фрагменты, в Kibana 50 документов вместо одного события. Решение — `multiline` конфиг в Filebeat до отправки в Logstash.</li>
+<li>**Диск 95% → кластер блокирует запись** — ES включает flood-stage watermark при заполнении диска и переводит индекс в read-only. Логи перестают записываться, Logstash начинает буферить. Настрой алерт на 80%, а не жди 95%. Разблокировка: `PUT index/_settings {"index.blocks.read_only_allow_delete": null}`.</li>
+<li>**`_source: false` в mapping** — экономит место, но без `_source` нельзя сделать reindex или update. Если понадобится изменить mapping — придётся читать данные из другого источника. Не отключай `_source` если не уверен что данные никогда не понадобятся заново.</li>
+<li>**Security отключён в проде** — ES 7.x по умолчанию открыт без аутентификации. В 8.x security включён по умолчанию, но миграция с 7.x часто ломает это. Не добавляй `xpack.security.enabled: false` в конфиг «чтобы быстрее заработало» — это открывает кластер без пароля.</li>
+</ul>
+
+## Когда что выбирать
+
+| Хочу X | Используй |
+| --- | --- |
+| Логи с нескольких серверов, нужен grok/enrichment | Filebeat → Logstash → ES |
+| Логи уже в JSON, enrichment не нужен | Filebeat → ES напрямую (без Logstash) |
+| Метрики (CPU, диск) вместе с логами | Metricbeat + Filebeat в один ES |
+| Логи в Kubernetes, нет shell-доступа к нодам | Fluent Bit (DaemonSet) → ES или Loki |
+| Prometheus уже есть, хочу логи рядом | Grafana Loki (дешевле хранилище, слабее поиск) |
+| Облако, не хочу управлять кластером | Elastic Cloud или OpenSearch Serverless |
+| Долгосрочное дешёвое хранение (холодный архив) | ILM cold phase + Searchable Snapshots в S3 |
+| Поиск по `keyword` полю точным совпадением | `term` запрос |
+| Полнотекстовый поиск по `text` полю | `match` запрос |
+
 ## Проверь себя
 
 <QuizCard
-  question="Ты создал индекс с одним primary-шардом и разворачиваешь кластер из пяти нод. В чём проблема с такой конфигурацией?"
+  question="Ты создал индекс nginx-logs с одним primary-шардом на кластере из 5 нод. Все ноды healthy, replica-шарды green. Через неделю нагрузка выросла в 10 раз и индекс не справляется с поиском. Что произошло и как это исправить?"
   options={[
-    "Replica-шарды не смогут создаться — для репликации нужно минимум столько же нод, сколько шардов",
-    "Индекс не масштабируется горизонтально: один шард живёт на одной ноде, остальные четыре ноды не помогут с записью и поиском по этому индексу",
-    "Elasticsearch запрещает создавать индексы с числом шардов меньше числа нод в кластере"
+    "Нужно добавить ещё нод — при добавлении ноды ES автоматически расщепляет шарды",
+    "Один primary-шард живёт ровно на одной ноде — 4 из 5 нод не участвуют в поиске по этому индексу. Исправление только через reindex в новый индекс с большим числом шардов",
+    "Нужно увеличить heap JVM на ноде с primary-шардом — это разблокирует параллельную обработку",
+    "Replica-шарды тоже отвечают на запросы чтения, поэтому проблема не в шардировании"
   ]}
   correct={1}
-  explanation="Шард — минимальная единица распределения. Один шард всегда на одной ноде, разбить его по нескольким нельзя. Пять нод дадут тебе отказоустойчивость через replica-шарды, но пропускная способность записи и поиска ограничена одним primary. Чтобы использовать все пять нод под нагрузку — нужно минимум пять primary-шардов."
+  explanation="Шард — минимальная единица распределения, разбить его по нескольким нодам нельзя. Replica-шарды действительно отвечают на read-запросы (и это помогает с чтением), но один primary-шард — это потолок пропускной способности записи и параллельного поиска. Изменить number_of_shards после создания индекса нельзя — только reindex в новый индекс с нужным шардированием через _reindex API."
+  label="quiz · 01"
 />
+
+<QuizCard
+  question={'В index template поле message объявлено как type: text. Ты пишешь KQL-запрос в Kibana: message:"connection refused" — ничего не находит, хотя в Discover видно документы с этой строкой. В чём причина?'}
+  options={[
+    "KQL не поддерживает поиск по полю message, нужно использовать Lucene-синтаксис",
+    "text-поле токенизируется при индексации — строка разбивается на слова. Запрос message:\"connection refused\" ищет фразу, но токенайзер мог изменить регистр или разбить иначе. Для точного совпадения нужен keyword subfield: message.keyword:\"connection refused\"",
+    "Двойные кавычки в KQL зарезервированы для числовых диапазонов, нужно использовать одинарные",
+    "Проблема в том что message удалён через mutate в Logstash, нужно проверить конфиг пайплайна"
+  ]}
+  correct={1}
+  explanation="Поле type: text проходит через анализатор: токенизация, lowercase, стеминг. При индексации 'connection refused' хранится как отдельные токены 'connection' и 'refused'. Поиск фразой работает через match_phrase, а не term. Для точного совпадения строки добавь keyword subfield в mapping: fields: { keyword: { type: keyword } } — тогда message.keyword хранит оригинальную строку без обработки."
+  label="quiz · 02"
+/>
+
+## Шпаргалка
+
+<div className="cheatsheet">
+
+```bash
+# Состояние кластера
+curl -s -u elastic:$ES_PASS https://localhost:9200/_cat/health?v
+
+# Индексы по размеру
+curl -s -u elastic:$ES_PASS "https://localhost:9200/_cat/indices?v&s=store.size:desc"
+
+# Нераспределённые шарды — почему
+curl -s -u elastic:$ES_PASS https://localhost:9200/_cluster/allocation/explain | python3 -m json.tool
+
+# ILM-статус индекса
+curl -s -u elastic:$ES_PASS https://localhost:9200/nginx-2026.05.20/_ilm/explain | python3 -m json.tool
+
+# Создать / обновить ILM-политику
+curl -s -u elastic:$ES_PASS -X PUT -H "Content-Type: application/json" \
+  https://localhost:9200/_ilm/policy/nginx-logs-policy -d @ilm-policy.json
+
+# Создать index template
+curl -s -u elastic:$ES_PASS -X PUT -H "Content-Type: application/json" \
+  https://localhost:9200/_index_template/nginx-logs-template -d @template.json
+
+# Поиск последних 10 ошибок
+curl -s -u elastic:$ES_PASS -H "Content-Type: application/json" \
+  https://localhost:9200/nginx-*/_search \
+  -d '{"query":{"term":{"status":500}},"sort":[{"@timestamp":"desc"}],"size":10}'
+
+# Reindex (после изменения mapping)
+curl -s -u elastic:$ES_PASS -X POST -H "Content-Type: application/json" \
+  https://localhost:9200/_reindex \
+  -d '{"source":{"index":"nginx-old"},"dest":{"index":"nginx-new"}}'
+
+# Разблокировать read-only индекс (после flood-stage)
+curl -s -u elastic:$ES_PASS -X PUT -H "Content-Type: application/json" \
+  https://localhost:9200/nginx-*/_settings \
+  -d '{"index.blocks.read_only_allow_delete": null}'
+
+# Проверить конфиг Filebeat без запуска
+filebeat test config -c /etc/filebeat/filebeat.yml
+
+# Проверить подключение Filebeat к выходу
+filebeat test output -c /etc/filebeat/filebeat.yml
+
+# Тест конфига Logstash
+/usr/share/logstash/bin/logstash -t -f /etc/logstash/conf.d/nginx.conf
+
+# Mapping индекса
+curl -s -u elastic:$ES_PASS https://localhost:9200/nginx-2026.05.20/_mapping | python3 -m json.tool
+```
+
+</div>

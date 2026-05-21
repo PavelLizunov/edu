@@ -8,65 +8,140 @@ tags: ["ansible", "docker", "containers", "config-management"]
 description: "Идемпотентная конфигурация серверов + упаковка приложений в контейнеры"
 ---
 
+## Зачем это вообще
+
+Ты можешь настроить один сервер руками за час. Пятьдесят серверов — за неделю, с гарантией что они будут незаметно отличаться друг от друга. Ansible решает это: описываешь желаемое состояние один раз, запускаешь на всех — везде одинаково. Docker закрывает другую проблему: «работает у меня» исчезает, когда приложение вместе с окружением упаковано в образ и запускается на любой машине идентично.
+
 ## Аналогия
 
 <AnalogyBox>
-Ansible — как шеф-повар с рецептом, который сначала пробует блюдо и досыпает соль только
-если её не хватает. Запусти рецепт хоть десять раз — результат одинаковый, пересолить нельзя.
-Docker — это не рецепт, а сама коробка с плитой, кастрюлями и всеми ингредиентами внутри.
-Берёшь коробку, открываешь — кухня уже готова к работе, на любом столе.
+Ansible — это шеф-повар, который приходит на общую кухню с рецептом. Он сначала пробует блюдо и добавляет соль только если её не хватает. Запусти рецепт хоть десять раз — блюдо будет одинаковым, пересолить невозможно. <b>Docker</b> — это уже не рецепт, а запечатанный TV-dinner в коробке: внутри уже лежит и сама плита, и кастрюля, и все ингредиенты. Открыл коробку на любом столе — кухня готова к работе.
 </AnalogyBox>
+
+## Картина мира
+
+<MermaidDiagram label="Ansible control node → managed hosts / Docker daemon → registry" code={`
+flowchart LR
+  subgraph AN[Ansible]
+    PB([playbook.yaml])
+    INV[(inventory.ini)]
+    PB --> CN[control node]
+    INV --> CN
+  end
+  CN -- SSH --> H1[managed host 1]
+  CN -- SSH --> H2[managed host 2]
+  CN -- SSH --> H3[managed host 3]
+
+  subgraph DO[Docker]
+    DF([Dockerfile])
+    DF --> DB[docker build]
+    DB --> IMG[(image)]
+    IMG --> REG{{registry}}
+    REG --> DC[docker run / compose]
+    DC --> C1[container 1]
+    DC --> C2[container 2]
+  end
+`} />
+
+Ansible управляет хостами через SSH — агент на хосте не нужен. Docker работает локально через daemon: образ собирается, пушится в registry, оттуда тянется на любой хост и запускается как контейнер.
 
 ## Ключевые концепции
 
 <ConceptGrid>
-  <ConceptCard title="Idempotency" icon="RefreshCw">
-    Запускаешь playbook второй раз — ничего не ломается, уже настроенное не трогается.
-    Ansible сравнивает желаемое состояние с фактическим и делает только недостающее.
-    Нарушение идемпотентности — главный признак плохо написанного playbook.
+  <ConceptCard title="Идемпотентность" icon="RefreshCw">
+    Playbook запускается повторно — уже настроенное не трогается, только дельта применяется.
+    Нарушение идемпотентности — первый признак плохого playbook. Если используешь
+    `ansible.builtin.shell`, оборачивай в `creates:` или `changed_when: false`, иначе
+    модуль будет сообщать `changed` при каждом запуске.
   </ConceptCard>
 
   <ConceptCard title="Inventory" icon="ListTree">
-    Список хостов и групп: `[web]`, `[db]`, `[all]`. Статический — просто ini/yaml файл.
-    Динамический — скрипт или плагин, который тянет список из AWS/GCP/Hetzner в runtime.
-    Переменные хоста живут в `host_vars/<hostname>.yml`, группы — в `group_vars/<group>.yml`.
+    Список хостов и групп: `[web]`, `[db]`, `[all]`. Статический — ini или yaml файл.
+    Динамический — плагин, который тянет список из AWS/Hetzner/GCP в runtime.
+    Переменные хоста — в `host_vars/<hostname>.yml`, группы — в `group_vars/<group>.yml`.
+    Никогда не храни пароли в inventory plaintext — только через `ansible-vault`.
   </ConceptCard>
 
-  <ConceptCard title="Playbook & Roles" icon="Workflow">
+  <ConceptCard title="Playbook и Roles" icon="Workflow">
     Playbook — YAML со списком plays, каждый play = хосты + задачи. Role — переиспользуемый
-    блок: tasks, handlers, defaults, templates в одной папке. Правило: если роль
-    используется больше одного раза — выноси в `roles/`, иначе можно и в playbook.
+    блок: `tasks/`, `handlers/`, `defaults/`, `templates/` в одной папке. Если роль
+    нужна больше чем в одном playbook — выноси в `roles/`. Иначе достаточно inline tasks.
+  </ConceptCard>
+
+  <ConceptCard title="Handlers и notify" icon="Zap">
+    Handler — задача, которая запускается только если что-то изменилось. Один handler
+    может получить `notify` от десяти задач, но выполнится один раз в конце play.
+    Типичный сценарий: изменился конфиг nginx → handler делает `service: state: reloaded`.
+    Без handler пришлось бы перезапускать сервис при каждом запуске playbook.
   </ConceptCard>
 
   <ConceptCard title="Image vs Container" icon="Package">
     Image — неизменяемый слепок файловой системы, шаблон. Container — запущенный процесс
-    поверх image с тонким writable-слоем. Один image → тысячи контейнеров одновременно.
-    Удалил контейнер — writable-слой исчез, image остался.
+    поверх image с тонким writable-слоем. Один image — тысячи контейнеров одновременно.
+    Удалил контейнер — writable-слой исчез, image остался нетронутым.
   </ConceptCard>
 
-  <ConceptCard title="Layers & кеш сборки" icon="Layers">
-    Каждая инструкция в Dockerfile — отдельный слой. Docker кеширует слои сверху вниз
-    и пересобирает с первого изменённого. `COPY . .` перед `npm install` — антипаттерн:
-    любое изменение кода сбрасывает кеш зависимостей. Сначала `package.json`, потом `npm install`,
-    потом исходники.
+  <ConceptCard title="Layers и кеш сборки" icon="Layers">
+    Каждая инструкция Dockerfile — отдельный слой. Docker кеширует слои сверху вниз
+    и пересобирает начиная с первого изменённого. `COPY . .` перед `npm install` —
+    антипаттерн: правка одного `.ts` файла сбрасывает кеш установки зависимостей.
+    Правило: тяжёлое и редко меняющееся — ниже, часто меняющееся — выше.
   </ConceptCard>
 
   <ConceptCard title="Volumes" icon="HardDrive">
     Данные в writable-слое контейнера исчезают при `docker rm`. Volume живёт отдельно
-    от контейнера и переживает его пересоздание. Bind mount (`./data:/data`) удобен
-    в dev, named volume (`pgdata:/var/lib/postgresql/data`) — правильный выбор для прода.
+    от контейнера. Bind mount (`./data:/data`) — удобен в dev, но в проде нет гарантии
+    прав и структуры директорий. Named volume (`pgdata:/var/lib/postgresql/data`) —
+    правильный выбор: Docker сам управляет жизненным циклом.
+  </ConceptCard>
+
+  <ConceptCard title="Networks" icon="Network">
+    По умолчанию `docker compose` создаёт bridge-сеть и все сервисы видят друг друга
+    по имени сервиса. `host` network — контейнер использует сетевой стек хоста, нет
+    изоляции, зато нет оверхеда NAT. `none` — полная изоляция. Явно называй сети
+    в compose, не полагайся на имя по умолчанию.
   </ConceptCard>
 </ConceptGrid>
 
+## Порядок слоёв Dockerfile
+
+<MermaidDiagram label="слои Dockerfile — снизу тяжёлые, сверху лёгкие" code={`
+flowchart TD
+  L1["FROM node:20-alpine
+  (базовый образ, кешируется навсегда)"]
+  L2["COPY package.json package-lock.json ./
+  (меняется редко — только при изменении зависимостей)"]
+  L3["RUN npm ci --omit=dev
+  (тяжёлый шаг, кешируется пока L2 не изменился)"]
+  L4["COPY . .
+  (исходники — меняются часто)"]
+  L5["RUN npm run build
+  (пересобирается при каждом изменении кода)"]
+  L6["CMD node dist/index.js
+  (метаданные, не создаёт слой с данными)"]
+
+  L1 --> L2 --> L3 --> L4 --> L5 --> L6
+
+  style L1 fill:#1e3a2f,color:#a3e6c3
+  style L2 fill:#1e3a2f,color:#a3e6c3
+  style L3 fill:#1e3a2f,color:#a3e6c3
+  style L4 fill:#3a2a1e,color:#e6c3a3
+  style L5 fill:#3a2a1e,color:#e6c3a3
+  style L6 fill:#2a1e3a,color:#c3a3e6
+`} />
+
+Зелёные слои — стабильны, кешируются на CI. Оранжевые — инвалидируются при каждом изменении исходников. Именно поэтому `COPY package.json` всегда идёт до `COPY .`.
+
 ## Примеры
 
-**playbook.yml — nginx на хосте web**
+**playbook.yml — установка nginx с handler'ом перезагрузки**
 
 ```yaml
 ---
 - name: Настройка веб-сервера
   hosts: web
-  become: true  # sudo
+  become: true           # sudo на удалённом хосте
+  become_method: sudo    # явно — не полагаться на дефолт
 
   vars:
     nginx_version: "1.27.*"
@@ -77,13 +152,15 @@ Docker — это не рецепт, а сама коробка с плитой,
         name: "nginx={{ nginx_version }}"
         state: present
         update_cache: true
+        cache_valid_time: 3600   # не делать apt update если кеш свежее часа
 
-    - name: Скопировать конфиг сайта
+    - name: Скопировать конфиг сайта из шаблона
       ansible.builtin.template:
         src: templates/site.conf.j2
         dest: /etc/nginx/sites-available/default
         mode: "0644"
-      notify: Перезапустить nginx  # вызывает handler только при изменении
+        validate: nginx -t -c %s  # проверить конфиг до замены файла
+      notify: Перезагрузить nginx  # handler запустится только если файл изменился
 
     - name: Убедиться что nginx запущен и включён в автозагрузку
       ansible.builtin.service:
@@ -92,55 +169,81 @@ Docker — это не рецепт, а сама коробка с плитой,
         enabled: true
 
   handlers:
-    - name: Перезапустить nginx
+    - name: Перезагрузить nginx
       ansible.builtin.service:
         name: nginx
-        state: reloaded
+        state: reloaded   # reloaded, не restarted — без разрыва соединений
 ```
 
-**Dockerfile — Node-приложение с правильным порядком слоёв**
+**inventory.ini — группы, переменные, bastian-хост**
+
+```ini
+[web]
+web-01.example.com
+web-02.example.com
+
+[db]
+db-01.example.com ansible_user=ubuntu
+
+[all:vars]
+# python3 обязателен на Ubuntu 22.04+, иначе Ansible использует python2
+ansible_python_interpreter=/usr/bin/python3
+
+[web:vars]
+# переменные группы; секреты — только через ansible-vault, не здесь
+http_port=80
+https_port=443
+```
+
+**Dockerfile — multi-stage Node-приложение**
 
 ```dockerfile
+# Stage 1: только зависимости — этот слой кешируется пока не изменится package.json
 FROM node:20-alpine AS deps
 WORKDIR /app
-# Сначала только манифест зависимостей — этот слой кешируется пока не изменится package.json
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
+# Stage 2: сборка
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-# Исходники копируем последними — их изменение не сбрасывает кеш зависимостей
+# Исходники копируем ПОСЛЕ node_modules — изменение кода не сбрасывает кеш deps
 COPY . .
 RUN npm run build
 
+# Stage 3: минимальный финальный образ — только то что нужно в проде
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-# Только артефакты, без dev-зависимостей и исходников
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
+# Не запускаем от root — минимальные привилегии
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+COPY --from=deps    /app/node_modules ./node_modules
+COPY --from=builder /app/dist         ./dist
 COPY package.json ./
-
+USER appuser
 EXPOSE 3000
 CMD ["node", "dist/index.js"]
 ```
 
-**docker-compose.yml — web + postgres**
+**docker-compose.yml — web + postgres с healthcheck**
 
 ```yaml
 services:
   web:
     build: .
-    image: myapp:latest
+    image: myapp:1.0.0    # конкретный тег, не latest
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"   # bind на localhost — nginx-proxy снаружи, не сам порт
     environment:
-      DATABASE_URL: postgres://app:secret@db:5432/appdb
+      DATABASE_URL: postgres://app:${DB_PASSWORD}@db:5432/appdb
+      # Секрет берём из .env файла или окружения хоста — не хардкодим
     depends_on:
       db:
-        condition: service_healthy  # ждёт healthcheck, а не просто старт
+        condition: service_healthy  # ждёт healthcheck, а не просто старт процесса
+    networks:
+      - backend
 
   db:
     image: postgres:16-alpine
@@ -148,28 +251,130 @@ services:
     environment:
       POSTGRES_DB: appdb
       POSTGRES_USER: app
-      POSTGRES_PASSWORD: secret
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - pgdata:/var/lib/postgresql/data  # named volume, данные переживают пересоздание
+      - pgdata:/var/lib/postgresql/data   # named volume — данные переживают пересоздание
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
       interval: 5s
       timeout: 3s
       retries: 5
+      start_period: 10s   # не считать провалы пока БД не поднялась
+    networks:
+      - backend
 
 volumes:
   pgdata:
+
+networks:
+  backend:
+    driver: bridge
 ```
+
+## Грабли
+
+<ul className="pitfalls">
+<li>**`:latest` тег в Dockerfile и compose** — `docker compose up -d --build` не перетянет новый образ если локально уже есть слой с тем же тегом. Тэгай конкретно: `postgres:16-alpine`, `node:20-alpine`. В CI всегда `docker pull` перед билдом или используй `--no-cache`.</li>
+<li>**`RUN apt-get update && apt-get install` в отдельных слоях** — если `apt-get update` закешировался, а потом ты добавил пакет, установка упадёт с `Unable to locate package`. Всегда в одной инструкции: `RUN apt-get update && apt-get install -y --no-install-recommends pkg && rm -rf /var/lib/apt/lists/*`.</li>
+<li>**`COPY . .` перед `COPY package.json`** — любое изменение `.ts` файла сбрасывает кеш `npm install`. На проекте с 500 зависимостями это плюс 3 минуты к каждому билду. Сначала манифест зависимостей, потом установка, потом исходники.</li>
+<li>**`become: true` без `become_method: sudo`** — на некоторых дистрибутивах дефолт не `sudo`, а `su`. Явно прописывай `become_method: sudo` на уровне play или в `ansible.cfg`.</li>
+<li>**Забытый `ansible_python_interpreter` на Ubuntu 22.04+** — Ansible по умолчанию ищет `/usr/bin/python`, которого нет. Результат: `Failed to connect to the host via python`. Добавь в `[all:vars]`: `ansible_python_interpreter=/usr/bin/python3`.</li>
+<li>**`host_key_checking = True` в CI** — первое подключение к новому хосту падает с интерактивным вопросом про fingerprint, которому никто не ответит. В `ansible.cfg` для CI: `host_key_checking = False`. Для прода — `known_hosts` в CI пайплайне.</li>
+<li>**Контейнер работает от `root`** — по умолчанию Docker запускает процесс как root внутри контейнера. Если есть path traversal или RCE — атакующий получает root в контейнере и риск побега. Добавляй `USER appuser` в Dockerfile.</li>
+<li>**Секреты через `ENV` в Dockerfile** — `ENV DB_PASSWORD=secret` видно через `docker history myimage`. Передавай секреты через `--secret` флаг buildkit или через переменные окружения хоста в compose, а не запекай в образ.</li>
+</ul>
+
+## Когда что выбирать
+
+| Хочу X | Используй |
+| --- | --- |
+| Настроить и поддерживать конфигурацию хостов | `Ansible` playbook + roles |
+| Создать неизменяемое окружение для приложения | `Dockerfile` + image registry |
+| Запустить несколько сервисов локально или на одном хосте | `docker compose` |
+| Оркестрировать контейнеры на кластере серверов | `Kubernetes` (Ansible тут — только установка K8s) |
+| Создать инфраструктуру (VPC, диски, балансировщик) | `Terraform`, не Ansible |
+| Установить Terraform, Docker, K8s на хосты | `Ansible` |
+| Хранить секреты — пароли, ключи | `ansible-vault` (Ansible) / `--secret` buildkit / Vault (HashiCorp) |
+| Дебажить контейнер на лету | `docker exec -it CONTAINER sh` |
 
 ## Проверь себя
 
 <QuizCard
-  question="Почему инструкция COPY . . перед RUN npm install в Dockerfile — антипаттерн?"
+  question="Ты запустил ansible-playbook второй раз на уже настроенных хостах — всё зелёное (ok), но хочешь убедиться что конфиги не поплыли. Что покажет третий запуск в режиме --check?"
   options={[
-    "Docker не умеет кешировать слои с COPY, поэтому это замедляет только первую сборку",
-    "Любое изменение исходного кода сбрасывает кеш слоя с npm install, и зависимости переустанавливаются каждый раз",
-    "COPY . . копирует node_modules с хоста внутрь образа и перезаписывает установленные зависимости"
+    "Ansible применит изменения, но не перезапустит сервисы — handlers не вызываются в --check",
+    "Ansible покажет что изменилось бы, но ничего не применит — dry-run без side effects",
+    "--check запускает playbook только на первом хосте из каждой группы для проверки",
+    "Если состояние совпадает с желаемым, --check вернёт код выхода 1 (нечего делать)"
   ]}
   correct={1}
-  explanation="Docker инвалидирует кеш слоя при любом изменении входных файлов. Если COPY . . стоит до npm install — правка одного .ts файла сбрасывает кеш установки зависимостей, и npm ci запускается заново. Решение: сначала скопировать только package.json, установить зависимости, затем копировать исходники."
+  explanation="--check (dry-run) сравнивает желаемое состояние с фактическим и сообщает что изменилось бы, но не применяет ничего. Идеально для проверки drift конфигурации. Важный нюанс: некоторые модули (shell, command) в --check сообщают changed всегда, если не указать changed_when явно."
+  label="quiz · 01"
 />
+
+<QuizCard
+  question="После добавления одного файла в src/ время docker build выросло с 15 секунд до 4 минут. Dockerfile выглядит так: FROM node:20-alpine / COPY . . / RUN npm ci / RUN npm run build. В чём причина и как починить?"
+  options={[
+    "Образ node:20-alpine устарел и Docker заново скачивает его с registry — нужно docker pull вручную",
+    "COPY . . стоит перед npm ci, поэтому изменение любого файла сбрасывает кеш слоя с установкой зависимостей",
+    "npm ci всегда медленнее npm install — нужно заменить на npm install --prefer-offline",
+    "Docker не кеширует слои если размер COPY превышает 10MB — нужен .dockerignore"
+  ]}
+  correct={1}
+  explanation="COPY . . копирует исходники до npm ci. Docker инвалидирует кеш слоя при любом изменении входных данных — правка .ts файла делает слой с npm ci устаревшим и зависимости устанавливаются заново. Решение: COPY package.json package-lock.json ./ → RUN npm ci → COPY . . → RUN npm run build."
+  label="quiz · 02"
+/>
+
+## Шпаргалка
+
+<div className="cheatsheet">
+
+```bash
+# --- Ansible ---
+
+# проверить связь со всеми хостами из inventory
+ansible -i inventory.ini all -m ping
+
+# запустить playbook с конкретным inventory
+ansible-playbook -i inventory.ini playbook.yml
+
+# dry-run — показать что изменится, не применять
+ansible-playbook -i inventory.ini playbook.yml --check
+
+# запустить только на конкретном хосте или группе
+ansible-playbook -i inventory.ini playbook.yml --limit web-01.example.com
+
+# зашифровать файл с секретами
+ansible-vault encrypt group_vars/all/secrets.yml
+
+# редактировать зашифрованный файл
+ansible-vault edit group_vars/all/secrets.yml
+
+# запустить playbook с vault-паролем из файла
+ansible-playbook -i inventory.ini playbook.yml --vault-password-file .vault_pass
+
+# --- Docker ---
+
+# собрать образ с тегом
+docker build -t myapp:1.0.0 .
+
+# пересобрать без кеша
+docker build --no-cache -t myapp:1.0.0 .
+
+# посмотреть слои образа (и что в каждом)
+docker history myapp:1.0.0
+
+# запустить compose в фоне с пересборкой
+docker compose up -d --build
+
+# посмотреть логи сервиса в реальном времени
+docker logs -f CONTAINER_NAME
+
+# зайти внутрь работающего контейнера
+docker exec -it CONTAINER_NAME sh
+
+# удалить остановленные контейнеры, неиспользуемые образы и тома
+docker system prune -a --volumes
+```
+
+</div>

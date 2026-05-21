@@ -8,147 +8,341 @@ tags: ["networking", "tcp", "dns", "iptables", "nat"]
 description: "OSI, IP, NAT, DNS, iptables — сетевой минимум для инженера"
 ---
 
+## Зачем это вообще
+
+Девяносто процентов ситуаций «работает локально, не работает в проде» и «работает по IP, не работает по hostname» — это сети. Без понимания того, как пакет идёт от процесса до процесса, ты будешь угадывать: перезапускать сервис, менять порты, добавлять правила наугад. Знание четырёх слоёв TCP/IP и пяти команд диагностики превращает это гадание в дедукцию.
+
 ## Аналогия
 
 <AnalogyBox>
-Сеть — это почтовая служба. Твой IP-адрес — номер дома, MAC-адрес — табличка с фамилией
-на конкретной двери в этом доме, маршрутизатор — районное почтовое отделение, которое
-знает куда везти письмо дальше. NAT — это портье в офисном центре: сотня сотрудников
-получает письма снаружи через один адрес офиса, и только портье знает кому из них
-что предназначалось.
+Представь посылку в матрёшке: <b>снаружи — конверт с адресом улицы</b> (Ethernet-кадр с MAC), внутри — <b>конверт с адресом города</b> (IP-пакет), ещё глубже — <b>конверт с номером кабинета</b> (TCP-сегмент с портом), и только в самом центре — <b>само письмо</b> (HTTP-запрос). Каждый курьер умеет работать только со своим конвертом и передаёт матрёшку следующему. DNS — это адресная книга: ты знаешь имя получателя, книга говорит на какую улицу везти.
 </AnalogyBox>
+
+## Картина мира
+
+<MermaidDiagram label="инкапсуляция: HTTP запрос вниз по стеку" code={`
+flowchart TB
+  subgraph A["L7 Application"]
+    HTTP["GET /api/users HTTP/1.1<br/>Host: example.com"]
+  end
+  subgraph T["L4 Transport"]
+    TCP["TCP сегмент<br/>src:54321 → dst:443"]
+  end
+  subgraph N["L3 Network"]
+    IP["IP пакет<br/>src:10.0.0.5 → dst:93.184.216.34"]
+  end
+  subgraph L["L2 Link"]
+    ETH["Ethernet кадр<br/>src MAC → dst MAC (шлюз)"]
+  end
+  HTTP --> TCP
+  TCP --> IP
+  IP --> ETH
+  ETH --> WIRE([физическая среда])
+`} />
+
+Каждый слой добавляет свой заголовок. При получении — снимает в обратном порядке. Маршрутизатор работает только с L3 и не знает что внутри TCP. Файрвол уже видит L4. L7-прокси (nginx, Envoy) разбирает самый внутренний конверт.
 
 ## Ключевые концепции
 
 <ConceptGrid>
-  <ConceptCard title="OSI и TCP/IP" icon="Layers">
-    7 слоёв OSI — это теория для troubleshooting: L1 (кабель), L2 (MAC, Ethernet),
-    L3 (IP, маршрутизация), L4 (TCP/UDP, порты), L7 (HTTP, DNS). На практике работаешь
-    с L3+L4 через `ip`/`ss`, с L7 через `curl`/`dig`. Проблема «пинг идёт, HTTP нет» —
-    это L4 или L7, а не L3.
+  <ConceptCard title="OSI / TCP-IP модель" icon="Layers">
+    Практическое значение: знать на каком уровне ломается. L1 — кабель/PHY, L2 — MAC/VLAN,
+    L3 — IP/маршрутизация, L4 — TCP/UDP/порты, L7 — HTTP/DNS/TLS. Пинг идёт — это L3 живой.
+    SSH не подключается — смотри L4 (`ss -tnlp`, файрвол). HTTP 502 — L7, проблема апстрима.
   </ConceptCard>
 
-  <ConceptCard title="CIDR и подсети" icon="Globe">
-    `192.168.1.0/24` — 256 адресов, из них 254 хостовых (первый — адрес сети, последний —
-    broadcast). `/24` — 256, `/25` — 128, `/16` — 65536. Чтобы прикинуть маску в голове:
-    `2^(32-prefix)`. Перекрывающиеся подсети в одном VPC — частая причина проблем с
-    маршрутизацией при VPN-пиринге.
+  <ConceptCard title="IP и CIDR" icon="Globe">
+    `/24` — 256 адресов (254 хостовых), `/25` — 128, `/16` — 65 536. Формула: `2^(32−prefix)`.
+    Первый адрес — адрес сети, последний — broadcast, оба нехостовые. Перекрывающиеся подсети
+    в двух VPC которые пирингуются — классический повод для недеплоящегося окружения. `/32` —
+    ровно один хост, удобно в правилах файрвола.
   </ConceptCard>
 
   <ConceptCard title="NAT: SNAT и DNAT" icon="Route">
-    SNAT (Source NAT) — подменяет исходящий IP, используется чтобы машины из приватной сети
-    выходили в интернет через один публичный IP. DNAT (Destination NAT) — подменяет
-    адрес назначения, используется для проброса порта снаружи внутрь. В iptables SNAT живёт
-    в цепочке `POSTROUTING`, DNAT — в `PREROUTING`.
+    SNAT (Source NAT) — подменяет исходящий IP, чтобы приватная сеть выходила через один
+    публичный IP. В iptables это цепочка `POSTROUTING` с target `MASQUERADE`.
+    DNAT (Destination NAT) — подменяет адрес назначения, проброс порта снаружи внутрь.
+    Это `PREROUTING`. Без conntrack сессии разрываются при смене соединения.
   </ConceptCard>
 
-  <ConceptCard title="iptables и nftables" icon="Shield">
-    iptables обрабатывает пакеты по таблицам (`filter`, `nat`, `mangle`) и цепочкам
-    (`INPUT`, `OUTPUT`, `FORWARD`). `INPUT` — трафик до локального процесса, `FORWARD` —
-    транзитный (роутинг), `OUTPUT` — от локального процесса наружу. nftables — современная
-    замена, одна утилита `nft` вместо `iptables`/`ip6tables`/`arptables`. На Ubuntu 22+ —
-    по умолчанию nftables под капотом, iptables — обёртка.
+  <ConceptCard title="iptables / nftables" icon="Shield">
+    iptables: таблицы `filter`, `nat`, `mangle`; цепочки `PREROUTING → INPUT/FORWARD → OUTPUT → POSTROUTING`.
+    `INPUT` — трафик к локальному процессу, `FORWARD` — транзит (роутинг), `OUTPUT` — от процесса наружу.
+    nftables — современная замена с одной утилитой `nft`. На Ubuntu 22.04+ iptables — это обёртка
+    над nftables. `iptables-save` и `nft list ruleset` — первые команды при отладке.
   </ConceptCard>
 
   <ConceptCard title="DNS" icon="Search">
-    A-запись — имя → IPv4. AAAA — имя → IPv6. CNAME — алиас на другое имя (нельзя на корень
-    зоны). MX — почтовый сервер. TTL определяет сколько секунд ответ кешируется у резолвера.
-    `dig +short example.com A` — быстрый способ проверить что отдаёт DNS без кеша браузера.
-    Если `localhost` и `127.0.0.1` ведут себя по-разному — скорее всего `/etc/hosts` или
-    Docker-резолвер возвращают разные IP.
+    A — имя → IPv4, AAAA — имя → IPv6, CNAME — алиас (нельзя на корень зоны), MX — почта,
+    PTR — обратная запись. TTL говорит сколько секунд кешировать; рекурсивный резолвер
+    кеширует сам, авторитативный — только отвечает за свою зону. `dig @8.8.8.8 example.com +short`
+    — проверить резолвинг мимо системного кеша.
   </ConceptCard>
 
-  <ConceptCard title="VLAN" icon="Cable">
-    Логическое разделение сети внутри одной физической. Хосты в VLAN 10 и VLAN 20 через
-    один коммутатор не видят друг друга без маршрутизатора — даже если на одном железе.
-    Тегируется на уровне Ethernet-фрейма (802.1Q). На Linux создаётся через `ip link add
-    link eth0 name eth0.10 type vlan id 10`.
+  <ConceptCard title="TCP vs UDP" icon="Shuffle">
+    TCP — надёжная доставка: handshake (SYN→SYN-ACK→ACK), retransmit, flow control.
+    Используй для HTTP, базы, SSH — всё что нельзя потерять. UDP — без гарантий, но
+    без overhead: DNS (маленькие запросы), видеостриминг, QUIC. gRPC поверх HTTP/2
+    использует TCP, но в k8s может пойти поверх QUIC (HTTP/3).
+  </ConceptCard>
+
+  <ConceptCard title="VLAN / VXLAN" icon="Cable">
+    VLAN (802.1Q) — логическое разделение L2 на одном физическом коммутаторе. Хосты в
+    разных VLAN не видят друг друга без маршрутизатора. VXLAN — то же самое, но поверх
+    UDP/IP: позволяет растянуть L2 между дата-центрами. Kubernetes Overlay-сети (Flannel,
+    Calico VXLAN) работают именно так.
+  </ConceptCard>
+
+  <ConceptCard title="MTU и фрагментация" icon="Zap">
+    Стандартный MTU Ethernet — 1500 байт. VPN и VXLAN добавляют свои заголовки и уменьшают
+    полезный MTU (VXLAN — 50 байт оверхед, итого 1450). Пакеты больше MTU либо
+    фрагментируются (медленно), либо дропаются если выставлен DF-бит (Don't Fragment).
+    Симптом: маленькие запросы проходят, большие — нет. Диагноз: `ping -M do -s 1400 <host>`.
   </ConceptCard>
 </ConceptGrid>
 
+## Жизненный цикл DNS-запроса
+
+<MermaidDiagram label="рекурсивное разрешение: client → authoritative" code={`
+sequenceDiagram
+  participant C as Клиент
+  participant R as Резолвер<br/>(8.8.8.8)
+  participant ROOT as Root NS<br/>(.)
+  participant TLD as TLD NS<br/>(.com)
+  participant AUTH as Authoritative NS<br/>(example.com)
+
+  C->>R: A? example.com
+  Note over R: нет в кеше
+  R->>ROOT: A? example.com
+  ROOT-->>R: NS для .com → a.gtld-servers.net
+  R->>TLD: A? example.com
+  TLD-->>R: NS для example.com → ns1.example.com
+  R->>AUTH: A? example.com
+  AUTH-->>R: 93.184.216.34 TTL 3600
+  Note over R: кешировать на 3600 сек
+  R-->>C: 93.184.216.34
+  Note over C: кешировать на TTL
+
+  C->>R: A? example.com (повторно)
+  Note over R: есть в кеше — TTL ещё не истёк
+  R-->>C: 93.184.216.34 (из кеша)
+`} />
+
+Резолвер кеширует ответ на TTL секунд. Пока TTL не истёк — к авторитативному серверу не ходит. Поэтому смена DNS A-записи вступает в силу не сразу, а через TTL старой записи.
+
 ## Примеры
 
-**Диагностика сети — базовый набор**
+**1. Диагностика — базовый набор**
 
 ```bash
-# Посмотреть все интерфейсы и их IP
+# интерфейсы и IP
 ip a
 
-# Таблица маршрутов: какой интерфейс/шлюз используется для адреса
-ip route
-ip route get 8.8.8.8   # точный маршрут до конкретного хоста
+# таблица маршрутов; куда уйдёт пакет до 8.8.8.8
+ip route show
+ip route get 8.8.8.8
 
-# Слушающие TCP-сокеты с процессами (аналог netstat -tnlp)
+# слушающие TCP-сокеты с PID и процессом (аналог netstat -tnlp)
 ss -tnlp
 
-# Проверить связность и RTT
-ping -c4 8.8.8.8
+# DNS: запрос напрямую к 8.8.8.8, минуя /etc/resolv.conf и nscd
+dig @8.8.8.8 example.com A +short
+dig @8.8.8.8 example.com AAAA +short
+dig @8.8.8.8 example.com MX +short
 
-# Трассировка маршрута: где пакет теряется или притормаживает
-traceroute -n 8.8.8.8   # -n чтобы не резолвить DNS и не ждать таймаутов
+# трассировка по TCP на порт 443 (-T = TCP SYN, -p = порт)
+# обычный ICMP traceroute блокируется файрволами, TCP — реже
+traceroute -T -p 443 example.com
 
-# DNS: что реально отдаёт резолвер (минуя кеш браузера/ОС)
-dig +short example.com A
-dig +short example.com MX
-dig @1.1.1.1 example.com A   # запрос к конкретному резолверу
+# проверка открытости порта без curl
+nc -zv example.com 443
 
-# Проверить что порт открыт и кто его держит
-ss -tnlp | grep :80
+# все active TCP-соединения и их состояния (TIME_WAIT, ESTABLISHED)
+ss -tn state established
 ```
 
-**iptables — проброс порта 80 → 8080 и базовый файрвол**
+**2. iptables DNAT: проброс входящего порта 80 на внутренний сервер**
 
 ```bash
-# DNAT: входящий трафик на порт 80 перенаправить на 127.0.0.1:8080
-# Нужно если приложение слушает на 8080, а снаружи должен быть порт 80
-iptables -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination 127.0.0.1:8080
-iptables -t nat -A OUTPUT -p tcp --dport 80 -j DNAT --to-destination 127.0.0.1:8080
-
-# SNAT/MASQUERADE: машины из 10.0.0.0/24 выходят в интернет через eth0
-iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -o eth0 -j MASQUERADE
-# Не забыть включить IP forwarding:
+# Задача: трафик на публичный IP:80 пробросить на 10.0.0.10:8080
+# Шаг 1 — включить IP-форвардинг (иначе транзитные пакеты дропаются)
 echo 1 > /proc/sys/net/ipv4/ip_forward
+# или постоянно:
+echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf && sysctl -p
 
-# Базовый файрвол: дропать всё входящее кроме SSH и established
-iptables -P INPUT DROP            # дефолтная политика — дроп
-iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT  # ответы на исходящие
-iptables -A INPUT -i lo -j ACCEPT                                   # loopback
-iptables -A INPUT -p tcp --dport 22 -j ACCEPT                      # SSH
+# Шаг 2 — DNAT в PREROUTING: перенаправить входящий трафик
+iptables -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to-destination 10.0.0.10:8080
 
-# Посмотреть текущие правила с номерами строк и счётчиками
-iptables -L -n -v --line-numbers
-iptables -t nat -L -n -v           # правила NAT-таблицы
+# Шаг 3 — MASQUERADE, чтобы ответ вернулся через этот хост, а не напрямую
+iptables -t nat -A POSTROUTING -d 10.0.0.10 -p tcp --dport 8080 -j MASQUERADE
 
-# Удалить конкретное правило по номеру (из вывода --line-numbers)
-iptables -D INPUT 3
+# Шаг 4 — разрешить FORWARD-трафик в filter-таблице (если политика DROP)
+iptables -A FORWARD -d 10.0.0.10 -p tcp --dport 8080 -j ACCEPT
+
+# Посмотреть результат
+iptables -t nat -L -n -v
+iptables -L FORWARD -n -v --line-numbers
 ```
 
-**tcpdump — перехват трафика для отладки**
+**3. tcpdump — перехват и анализ трафика**
 
 ```bash
-# Слушать интерфейс eth0, только трафик от/до хоста и порта 443
-# -n — не резолвить DNS (быстрее), -nn — ещё и порты числами
-tcpdump -i eth0 host 1.2.3.4 and port 443 -nn
+# слушать трафик на любом интерфейсе, фильтр по хосту и порту
+# -nn: не резолвить IP и порты в имена — быстрее и читаемее
+tcpdump -i any host 93.184.216.34 and port 443 -nn
 
-# Записать в файл для последующего анализа в Wireshark
+# записать в файл для Wireshark или передачи коллеге
 tcpdump -i eth0 port 443 -nn -w /tmp/capture.pcap
 
-# Посмотреть содержимое HTTP-пакетов в ASCII (только незашифрованный трафик)
-tcpdump -i eth0 port 80 -A -nn
+# прочитать сохранённый файл, показать первые 50 пакетов
+tcpdump -r /tmp/capture.pcap -nn | head -50
 
-# Все TCP SYN-пакеты (новые соединения) — удобно чтобы видеть кто к чему коннектится
-tcpdump -i eth0 'tcp[tcpflags] & tcp-syn != 0' -nn
+# все новые TCP-соединения (SYN без ACK) — кто к чему подключается
+tcpdump -i any 'tcp[tcpflags] & tcp-syn != 0 and tcp[tcpflags] & tcp-ack == 0' -nn
+
+# HTTP (незашифрованный) — заголовки в ASCII
+tcpdump -i any port 80 -A -nn | grep -E 'GET|POST|Host:|HTTP/'
 ```
+
+**4. nginx как L7-балансировщик с keepalive к апстримам**
+
+```nginx
+# /etc/nginx/conf.d/upstream.conf
+# nginx 1.27 — upstream с health_check и keepalive
+
+upstream backend {
+    # keepalive: держать до 32 idle-соединений к каждому серверу
+    # без keepalive nginx открывает новый TCP на каждый запрос — дорого
+    keepalive 32;
+
+    server 10.0.0.10:8080 weight=3;  # получит 3/4 трафика
+    server 10.0.0.11:8080 weight=1;
+    server 10.0.0.12:8080 backup;    # только если все основные недоступны
+}
+
+server {
+    listen 80;
+    server_name app.example.com;
+
+    location / {
+        proxy_pass         http://backend;
+
+        # обязательно для keepalive к апстриму
+        proxy_http_version 1.1;
+        proxy_set_header   Connection "";
+
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+
+        proxy_connect_timeout  5s;   # таймаут на установку TCP к апстриму
+        proxy_send_timeout     60s;
+        proxy_read_timeout     60s;
+    }
+}
+```
+
+## Грабли
+
+<ul className="pitfalls">
+<li>**`localhost` в Docker-контейнере — это не хост** — у каждого контейнера свой сетевой namespace. `localhost:5432` внутри контейнера — это loopback контейнера, там нет Postgres. Используй `host.docker.internal` (Mac/Windows), IP шлюза `172.17.0.1` (Linux bridge) или `--network=host` если изоляция не нужна.</li>
+<li>**DNS TTL не работает если приложение кеширует резолвер** — JVM, некоторые Go-библиотеки, и glibc кешируют DNS-ответы бесконечно или игнорируют TTL. После смены A-записи старый IP держится до перезапуска процесса. Проверяй через `strace -e getaddrinfo` или `lsof -i`.</li>
+<li>**MTU mismatch при VPN или VXLAN** — большие пакеты молча дропаются, маленькие проходят. Симптом: `curl` зависает на больших ответах, `ping -s 50` работает, `ping -M do -s 1400` — нет. Фикс: уменьши MTU на интерфейсе (`ip link set mtu 1450 dev eth0`) или настрой MSS clamping в iptables.</li>
+<li>**`iptables -F` без `--policy ACCEPT`** — сбросил правила, политика осталась `DROP`, сам себя отрезал от сервера. Перед сбросом: `iptables -P INPUT ACCEPT && iptables -P FORWARD ACCEPT && iptables -P OUTPUT ACCEPT`, потом `iptables -F`.</li>
+<li>**ARP-кеш после смены MAC или IP** — после переналивки железа или смены MAC-адреса сетевой карты соседи продолжают слать фреймы по старому MAC. Фикс: `arp -d <IP>` на соседних хостах или `arping -U -I eth0 <IP>` для бесплатного ARP-анонса.</li>
+<li>**`listen: 127.0.0.1` вместо `0.0.0.0`** — сервис стартовал, `ss -tnlp` показывает порт, но снаружи не достучаться. Это не файрвол — приложение само слушает только на loopback. Смотри в конфиге `bind`/`listen`/`host` настройки.</li>
+<li>**CIDR `/32` не является сетью** — это маска одного хоста. Если в правиле маршрутизации или файрвола нужна сеть — пиши `/32` явно и не жди что сработает подсеть. Типичная ошибка: `ip route add 10.0.0.5/32 via 10.0.0.1` — маршрут только до одного IP, не до всей `/24`.</li>
+<li>**Короткий TTL и долгоживущий клиент** — TTL DNS-записи 60 секунд не значит что клиент обновит IP через 60 секунд. Если соединение уже установлено — оно живёт пока не разорвётся. При смене IP апстрима старые keepalive-соединения продолжают идти на старый адрес до таймаута.</li>
+</ul>
+
+## Когда что выбирать
+
+| Хочу X | Используй |
+| --- | --- |
+| Приватная сеть выходит в интернет через один IP | SNAT / `MASQUERADE` в `POSTROUTING` |
+| Проброс внешнего порта на внутренний сервер | DNAT в `PREROUTING` |
+| Балансировка HTTP/HTTPS трафика с SSL-терминацией | L7-прокси: nginx 1.27, Caddy, Envoy |
+| Балансировка любого TCP/UDP без разбора протокола | L4-балансировщик: HAProxy, `ipvs`, AWS NLB |
+| Изолировать сети на одном физическом коммутаторе | VLAN (802.1Q) |
+| Растянуть L2 между дата-центрами / поверх L3 | VXLAN |
+| Надёжная доставка, порядок, без потерь | TCP |
+| Низкая latency, допустимы потери (стриминг, DNS, игры) | UDP |
+| Проверить что DNS отдаёт за пределами локального кеша | `dig @8.8.8.8` или `dig @1.1.1.1` |
+| Поймать где именно пакет теряется в сети | `traceroute -T -p 443` (TCP, реже блокируется) |
 
 ## Проверь себя
 
 <QuizCard
-  question="Приложение в Docker-контейнере пытается обратиться по адресу localhost:5432, но получает 'Connection refused', хотя PostgreSQL запущен на хосте и слушает 5432. В чём причина?"
+  question="Контейнер в Docker bridge-сети пытается подключиться к PostgreSQL на хосте через localhost:5432 и получает 'Connection refused'. PostgreSQL запущен, порт слушает. В чём причина?"
   options={[
-    "PostgreSQL не добавлен в одну Docker-сеть с контейнером, нужно создать docker network",
-    "Внутри контейнера localhost — это loopback самого контейнера, а не хоста; нужно использовать host.docker.internal или IP хостового интерфейса",
-    "Docker блокирует обращения к порту 5432 по соображениям безопасности, нужно добавить правило в iptables"
+    "Docker блокирует исходящие соединения из контейнера по умолчанию — нужно добавить правило в iptables",
+    "localhost внутри контейнера — это loopback самого контейнера, там нет PostgreSQL; нужно использовать IP хостового интерфейса (172.17.0.1) или host.docker.internal",
+    "PostgreSQL слушает на 127.0.0.1 хоста, что правильно, но нужно пробросить порт через docker run -p 5432:5432",
+    "Проблема в том что PostgreSQL и контейнер не в одной docker network — нужно docker network connect"
   ]}
   correct={1}
-  explanation="У каждого контейнера свой сетевой namespace, поэтому localhost внутри контейнера резолвится в 127.0.0.1 контейнера, а не хоста. Чтобы достучаться до сервиса на хосте, используй host.docker.internal (Mac/Windows) или IP хостового docker0-интерфейса (172.17.0.1 по умолчанию на Linux). Либо запусти контейнер с --network=host, но тогда он потеряет изоляцию."
+  explanation="У каждого контейнера свой сетевой namespace. localhost внутри контейнера резолвится в 127.0.0.1 этого namespace — там ничего не слушает. Чтобы достучаться до хоста: на Linux используй IP docker0 (172.17.0.1 по умолчанию), на Mac/Windows — host.docker.internal. Вариант с --network=host тоже работает, но убирает изоляцию."
+  label="quiz · 01"
 />
+
+<QuizCard
+  question="Ты сменил A-запись домена на новый IP. TTL был 300 секунд. Через 10 минут большинство клиентов уже ходят на новый IP, но один долгоживущий сервис-потребитель продолжает слать запросы на старый. Что происходит?"
+  options={[
+    "Кеш CDN не сбросился — нужно сделать cache purge на CDN-провайдере",
+    "Сервис кеширует DNS-ответ бесконечно или дольше TTL, либо у него уже открыто keepalive-соединение на старый IP, которое не разрывалось",
+    "Резолвер (8.8.8.8) ещё держит старую запись — нужно подождать ещё TTL",
+    "Проблема в CNAME цепочке — промежуточный CNAME закешировался с другим TTL"
+  ]}
+  correct={1}
+  explanation="Две независимые причины: (1) приложение использует DNS-библиотеку которая кеширует ответ дольше TTL или совсем игнорирует TTL (JVM по умолчанию, некоторые Go-приложения); (2) соединение уже установлено через keepalive — TCP не знает о смене DNS, пакеты продолжают идти по старому IP пока соединение живо. Фикс: перезапуск сервиса + уменьшение keepalive-таймаутов при миграции."
+  label="quiz · 02"
+/>
+
+## Шпаргалка
+
+<div className="cheatsheet">
+
+```bash
+# интерфейсы и адреса
+ip a
+
+# таблица маршрутов
+ip route show
+ip route get 8.8.8.8
+
+# слушающие порты с процессами (замена netstat)
+ss -tnlp
+
+# активные соединения
+ss -tn state established
+
+# DNS: мимо системного кеша
+dig @8.8.8.8 example.com A +short
+dig @8.8.8.8 example.com MX +short
+
+# трассировка TCP (реже блокируется файрволом чем ICMP)
+traceroute -T -p 443 example.com
+
+# перехват трафика
+tcpdump -i any host 1.2.3.4 and port 443 -nn
+tcpdump -i eth0 port 443 -nn -w /tmp/cap.pcap
+tcpdump -r /tmp/cap.pcap -nn
+
+# проверить открытость порта
+nc -zv example.com 443
+
+# правила iptables с номерами строк
+iptables -L -n -v --line-numbers
+iptables -t nat -L -n -v
+
+# nftables
+nft list ruleset
+
+# ARP-таблица
+arp -n
+
+# проверка MTU (DF-бит: не фрагментировать)
+ping -M do -s 1400 example.com
+```
+
+</div>

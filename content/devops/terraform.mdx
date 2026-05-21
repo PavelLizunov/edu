@@ -8,80 +8,136 @@ tags: ["terraform", "iac", "cloud", "hcl"]
 description: "Инфраструктура как код: декларативное описание желаемого состояния"
 ---
 
+## Зачем это вообще
+
+Когда инфраструктуру создают руками через веб-консоль — это называют «click-ops». Работает до первого аудита, инцидента или просьбы «подними точно такое же в staging». Воспроизвести окружение по памяти невозможно, проследить кто что изменил — тоже. Terraform описывает инфраструктуру кодом: один и тот же конфиг разворачивает prod и staging, все изменения проходят через git, а drift между желаемым и реальным состоянием видно через `plan`.
+
 ## Аналогия
 
 <AnalogyBox>
-Архитектор держит в руках план дома и сверяет его с тем, что стоит на участке. Чего нет по плану — построит, что стоит лишнее — снесёт, что сдвинулось — поправит. Тебе не нужно объяснять ему порядок работ: ты говоришь «хочу вот такой дом», а он сам разбирается, что и в каком порядке делать. Если двое рабочих попробуют перестроить один и тот же угол одновременно — план заблокируется, пока первый не закончит.
+Представь архитектора с подробным чертежом дома. <b>Чертёж</b> — это твой HCL-конфиг, он описывает каждую комнату. <b>Фотография построенного</b> — это state-файл, фиксирует что реально стоит на участке прямо сейчас. Перед каждым выездом архитектор сверяет чертёж с фотографией и составляет список работ: что достроить, что снести, что сдвинуть — это <b>plan</b>. Когда ты говоришь «поехали» — он вызывает бригаду и строители делают ровно этот список — это <b>apply</b>. Если сосед поменял дверь без ведома архитектора, фотография устарела и следующий plan покажет это как расхождение — <b>drift</b>.
 </AnalogyBox>
+
+## Картина мира
+
+<MermaidDiagram label="terraform code → state → cloud" code={`
+flowchart LR
+  subgraph local[локальная машина / CI]
+    CFG[HCL конфиг<br/>.tf файлы]
+    TF([terraform plan/apply])
+    CFG --> TF
+  end
+  subgraph backend[remote backend]
+    S3[(S3<br/>terraform.tfstate)]
+    DDB[(DynamoDB<br/>lock table)]
+    S3 <--> DDB
+  end
+  subgraph cloud[cloud provider]
+    AWS[AWS / GCP / Azure<br/>реальные ресурсы]
+  end
+  TF -- читает state --> S3
+  TF -- ставит lock --> DDB
+  TF -- создаёт/изменяет/удаляет --> AWS
+  TF -- пишет новый state --> S3
+  TF -- снимает lock --> DDB
+`} />
+
+`plan` читает state и опрашивает API облака — сравнивает оба. `apply` фиксирует lock в DynamoDB, применяет изменения в cloud и записывает новый state в S3. Без lock два параллельных `apply` запишут state поверх друг друга и получат повреждённый файл.
 
 ## Ключевые концепции
 
 <ConceptGrid>
   <ConceptCard title="Provider" icon="Plug">
-    Драйвер для конкретного облака или сервиса. `hashicorp/aws` знает как разговаривать с AWS API. Без provider-блока Terraform не знает, куда идти. Версию фиксируй — обновления ломают ресурсы.
+    Плагин-драйвер, который знает API конкретного облака или сервиса. `hashicorp/aws`, `hashicorp/google`, `hashicorp/kubernetes`. Без провайдера Terraform не знает как разговаривать с AWS. Версию провайдера всегда фиксируй через `~> 5.0` — мажорные обновления ломают ресурсы без предупреждения.
   </ConceptCard>
 
   <ConceptCard title="Resource" icon="Server">
-    Описание одного объекта инфраструктуры: S3-бакет, EC2-инстанс, DNS-запись. Terraform сравнивает описание с реальностью и доводит реальность до описания. Один ресурс — одна единица управления.
+    Описание одного управляемого объекта: `aws_s3_bucket`, `aws_instance`, `aws_route53_record`. Terraform сравнивает желаемое состояние (конфиг) с текущим (state + реальный API) и приводит одно к другому. Один `resource` — одна единица управления, один CRUD-цикл.
   </ConceptCard>
 
-  <ConceptCard title="State" icon="Database">
-    Файл `terraform.tfstate` — единственный источник правды о том, что Terraform уже создал. Local state опасен в команде: двое применят изменения поверх друг друга и получат конфликт. Храни state удалённо.
+  <ConceptCard title="Data source" icon="Database">
+    Read-only ссылка на ресурс, которым Terraform не управляет. `data "aws_ami" "ubuntu"` — не создаёт AMI, только читает ID последней Ubuntu. Позволяет ссылаться на существующую инфраструктуру (созданную вручную или другим Terraform-проектом) без передачи её под управление.
+  </ConceptCard>
+
+  <ConceptCard title="State" icon="HardDrive">
+    Файл `terraform.tfstate` — единственный источник истины о том, что Terraform уже создал и чем управляет. Хранит ID ресурсов в облаке, их атрибуты и зависимости между ними. Без state Terraform не знает, что удалять при `terraform destroy`. Local state опасен в команде — один `apply` поверх другого гарантированно даст конфликт.
   </ConceptCard>
 
   <ConceptCard title="Plan / Apply" icon="GitBranch">
-    `plan` показывает diff между state и конфигом — что создастся, изменится, удалится. `apply` исполняет этот diff. Никогда не делай `apply` без просмотра `plan` — удаление ресурса видно только там.
+    `plan` — dry-run: показывает diff между конфигом+state и реальным облаком. `+` создать, `~` изменить, `-` удалить. `apply` исполняет этот diff. Никогда не делай `apply` без просмотра `plan`: удаление RDS-инстанса с данными видно только в плане, и это последний шанс остановиться.
   </ConceptCard>
 
   <ConceptCard title="Module" icon="Layers">
-    Переиспользуемый блок конфигурации — папка с `.tf`-файлами, которую вызываешь как функцию с параметрами. Вместо копирования одного и того же VPC в три окружения — один модуль с переменными `env`, `cidr`.
+    Переиспользуемый набор ресурсов — папка с `.tf`-файлами, которую вызываешь как функцию с переменными. Вместо копирования VPC-конфига в три окружения — один модуль `module "vpc"` с параметром `env`. Публичные модули есть в Terraform Registry, но лучше начинать со своих: публичные часто overengineered.
   </ConceptCard>
 
   <ConceptCard title="Backend + Lock" icon="Lock">
-    Backend определяет, где хранится state. S3 + DynamoDB — стандарт для AWS: S3 хранит файл, DynamoDB блокирует его на время `apply`. Без блокировки параллельный `apply` от коллеги повредит state.
+    Backend определяет, где лежит state. S3 + DynamoDB — стандарт для AWS: S3 хранит файл, DynamoDB атомарно блокирует его на время `apply`. Без блокировки параллельный `apply` от коллеги повредит state — придётся восстанавливать вручную через `terraform state` команды.
+  </ConceptCard>
+
+  <ConceptCard title="Workspaces" icon="Layers">
+    Один набор `.tf`-файлов, несколько изолированных state-файлов. `terraform workspace new staging` создаёт `staging`-state в том же backend. Удобно для лёгких окружений (dev/staging/prod с одним кодом), но при росте инфры лучше разделять по директориям — workspaces не дают изоляции провайдера и конфига.
   </ConceptCard>
 </ConceptGrid>
 
+## Жизненный цикл ресурса
+
+<MermaidDiagram label="от изменения кода до state update" code={`
+flowchart TD
+  C1([изменил .tf конфиг]) --> C2
+  C2[terraform plan<br/>читает state + опрашивает cloud API] --> C3
+  C3{diff найден?}
+  C3 -- нет --> C3n([No changes. Infrastructure is up-to-date.])
+  C3 -- да --> C4[показывает diff<br/>+ create / ~ update / - destroy]
+  C4 --> C5{ты смотришь plan<br/>и говоришь yes}
+  C5 -- отмена --> C5n([изменения не применены])
+  C5 -- подтвердил --> C6[terraform apply<br/>lock state в DynamoDB]
+  C6 --> C7[вызов cloud API<br/>создать / изменить / удалить ресурс]
+  C7 --> C8{cloud ответил ок?}
+  C8 -- ошибка --> C8e[apply останавливается<br/>state частично обновлён<br/>следующий plan покажет что сделано]
+  C8 -- ок --> C9[записать новый state в S3<br/>снять lock]
+  C9 --> C10([готово, ресурс в желаемом состоянии])
+`} />
+
 ## Примеры
 
-**main.tf — S3-бакет и DynamoDB для remote state**
+**main.tf — S3-бакет и базовая IAM-политика**
 
 ```hcl
 terraform {
-  required_version = ">= 1.9"
+  required_version = ">= 1.7"
 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 5.0"   # мажор фиксируем, минор обновляем свободно
     }
   }
 }
 
 provider "aws" {
-  region = "eu-central-1"
+  region = var.aws_region
 }
 
-# Бакет для хранения tfstate других проектов
-resource "aws_s3_bucket" "tfstate" {
-  bucket = "my-company-tfstate"
+resource "aws_s3_bucket" "app_assets" {
+  bucket = "${var.project}-${var.env}-assets"
 
-  # Случайное удаление бакета уничтожит весь state — запрещаем
+  # destroy заблокирует удаление через Terraform — защита от случайного destroy
   lifecycle {
     prevent_destroy = true
   }
 }
 
-resource "aws_s3_bucket_versioning" "tfstate" {
-  bucket = aws_s3_bucket.tfstate.id
+resource "aws_s3_bucket_versioning" "app_assets" {
+  bucket = aws_s3_bucket.app_assets.id
 
   versioning_configuration {
     status = "Enabled"
   }
 }
 
-resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate" {
-  bucket = aws_s3_bucket.tfstate.id
+resource "aws_s3_bucket_server_side_encryption_configuration" "app_assets" {
+  bucket = aws_s3_bucket.app_assets.id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -90,70 +146,196 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate" {
   }
 }
 
-# Таблица для блокировки: без неё параллельный apply ломает state
-resource "aws_dynamodb_table" "tfstate_lock" {
-  name         = "my-company-tfstate-lock"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
+# Читаем текущий аккаунт без создания ресурса — data source
+data "aws_caller_identity" "current" {}
 
-  attribute {
-    name = "LockID"
-    type = "S"
-  }
+output "bucket_arn" {
+  value       = aws_s3_bucket.app_assets.arn
+  description = "ARN бакета для IAM политик других модулей"
 }
 ```
 
-**backend.tf — подключение remote state**
+**backend.tf — remote state на S3 с DynamoDB lock**
 
 ```hcl
+# bootstrap: этот файл нужен ПОСЛЕ того как S3 + DynamoDB созданы
+# в отдельном Terraform-проекте (или через AWS Console один раз)
 terraform {
   backend "s3" {
     bucket         = "my-company-tfstate"
-    key            = "prod/network/terraform.tfstate"
+    key            = "prod/app/terraform.tfstate"
     region         = "eu-central-1"
     dynamodb_table = "my-company-tfstate-lock"
-    encrypt        = true
+    encrypt        = true   # AES256 на стороне S3
   }
 }
 ```
 
-**Основные команды**
+**variables.tf + terraform.tfvars — типизированные переменные**
 
-```bash
-# Инициализация: скачивает провайдеры, настраивает backend
-terraform init
+```hcl
+# variables.tf — декларация с типами и валидацией
+variable "aws_region" {
+  type        = string
+  default     = "eu-central-1"
+  description = "AWS регион деплоя"
+}
 
-# Показывает diff — смотри внимательно перед apply
-terraform plan
+variable "env" {
+  type        = string
+  description = "Окружение: dev | staging | prod"
 
-# Применяет изменения из последнего plan
-# -auto-approve убирает интерактивный yes/no (только в CI)
-terraform apply
-terraform apply -auto-approve
+  # если передать staging123 — terraform plan сразу упадёт с ошибкой
+  validation {
+    condition     = contains(["dev", "staging", "prod"], var.env)
+    error_message = "env должен быть одним из: dev, staging, prod"
+  }
+}
 
-# Удаляет всё что в state — осторожно на проде
-terraform destroy
-
-# Форматирование файлов по стандарту HashiCorp
-terraform fmt -recursive
-
-# Импорт существующего ресурса в state без пересоздания
-terraform import aws_s3_bucket.legacy my-existing-bucket-name
-
-# Посмотреть что сейчас в state
-terraform state list
-terraform state show aws_s3_bucket.tfstate
+variable "project" {
+  type    = string
+  default = "myapp"
+}
 ```
+
+```hcl
+# terraform.tfvars — значения для конкретного окружения
+# в git не коммитим prod-значения если там секреты
+aws_region = "eu-central-1"
+env        = "prod"
+project    = "myapp"
+```
+
+**Использование модуля + outputs**
+
+```hcl
+# вызов локального модуля (./modules/vpc)
+module "vpc" {
+  source = "./modules/vpc"
+
+  env        = var.env
+  cidr_block = "10.0.0.0/16"
+  az_count   = 3   # сколько availability zones
+
+  # теги наследуются всеми ресурсами внутри модуля
+  tags = {
+    Project     = var.project
+    Environment = var.env
+    ManagedBy   = "terraform"
+  }
+}
+
+# output модуля используем снаружи
+resource "aws_instance" "app" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = "t3.small"
+  subnet_id     = module.vpc.private_subnet_ids[0]   # из output модуля
+}
+
+# terraform output vpc_id — покажет значение после apply
+output "vpc_id" {
+  value = module.vpc.vpc_id
+}
+```
+
+## Грабли
+
+<ul className="pitfalls">
+<li>**State хранится в git** — `terraform.tfstate` содержит все атрибуты ресурсов в plaintext, включая пароли RDS и ключи IAM. Даже если удалить из HEAD, в истории останется навсегда. Только remote state (S3, Terraform Cloud).</li>
+<li>**Ручное удаление ресурса в облаке** — state знает о нём, реальность — нет. Следующий `plan` предложит его пересоздать. Если пересоздание нежелательно — сначала `terraform state rm resource.name`, потом удаляй в облаке.</li>
+<li>**`terraform destroy` без `-target`** — уничтожит всё что в state данного проекта, включая базы с данными. На проде делай только `terraform destroy -target=aws_instance.staging_worker`.</li>
+<li>**Смешение `count` и `for_each` на одном ресурсе** — при удалении элемента из середины `count`-списка Terraform пересчитывает индексы и пересоздаёт все последующие ресурсы. Используй `for_each` с map/set: удаление одного ключа не трогает остальные.</li>
+<li>**Версии провайдеров не запинены** — `version = ">= 5.0"` позволяет поставить 6.0 при следующем `init`, а 6.0 может сломать синтаксис ресурсов. Используй `~> 5.0` (разрешает 5.x, запрещает 6.x) и коммить `.terraform.lock.hcl`.</li>
+<li>**Sensitive-значения попадают в state** — `sensitive = true` в переменной скрывает значение в выводе `plan`, но в `terraform.tfstate` оно хранится plaintext. Для паролей БД используй AWS Secrets Manager + data source, а не прямую передачу через переменную.</li>
+<li>**Отсутствие lock при параллельном apply** — два инженера запустили `apply` одновременно без DynamoDB-блокировки. Оба прочитали одинаковый state, оба записали разные версии поверх. Итог: state не отражает реальность и нужен `terraform state` для ручного восстановления.</li>
+<li>**`terraform import` без написания конфига** — `import` добавляет ресурс в state, но не создаёт `.tf`-описание. Следующий `plan` сразу предложит удалить его (нет в конфиге). Сначала пишешь ресурс в конфиге, потом импортируешь.</li>
+</ul>
+
+## Когда что выбирать
+
+| Хочу X | Используй |
+| --- | --- |
+| Провиженить облачные ресурсы (VPC, RDS, S3, IAM) | `Terraform` |
+| Настроить ОС, поставить пакеты на уже существующие серверы | `Ansible` |
+| Инфраструктура на TypeScript/Python/Go, не хочу учить HCL | `Pulumi` |
+| Инфра только в AWS, нет мульти-клауда, нет внешней команды | `CloudFormation` / `CDK` |
+| Переиспользовать конфиг VPC в dev/staging/prod | `module` с переменными |
+| Лёгкая изоляция state при одном конфиге | `terraform workspace` |
+| Полная изоляция окружений (разные провайдеры, конфиги) | отдельные директории / Terragrunt |
+| Посмотреть что изменится перед деплоем в CI | `terraform plan -out=plan.tfplan` + `show` |
 
 ## Проверь себя
 
 <QuizCard
-  question="Ты удалил S3-бакет руками через AWS Console, не через Terraform. Что покажет следующий terraform plan?"
+  question="Разработчик удалил RDS-инстанс руками через AWS Console. Что произойдёт при следующем terraform plan?"
   options={[
-    "Ничего — Terraform не знает о ручных изменениях до terraform refresh",
-    "Ошибку: state расходится с реальностью, нужно вручную исправить tfstate",
-    "plan предложит пересоздать бакет, потому что в state он есть, а в облаке — нет"
+    "terraform plan упадёт с ошибкой — state и реальность расходятся, нужен terraform refresh",
+    "terraform plan покажет +1 create: инстанс есть в state, но не существует в AWS — plan предложит его пересоздать",
+    "terraform plan не покажет изменений — ручные удаления Terraform не отслеживает",
+    "terraform plan покажет -1 destroy: он обнаружит расхождение и предложит удалить запись из state"
+  ]}
+  correct={1}
+  explanation="При каждом plan Terraform опрашивает реальное состояние AWS API и сравнивает с state. Инстанс есть в state, но отсутствует в API — это воспринимается как «ресурс нужно создать». Ручного terraform refresh с версии 0.15 не нужно. Если пересоздавать не хочешь — сначала terraform state rm, потом plan."
+  label="quiz · 01"
+/>
+
+<QuizCard
+  question="Два инженера одновременно запустили terraform apply в одном проекте. Backend — S3 без DynamoDB lock. Что произойдёт?"
+  options={[
+    "Второй apply упадёт с ошибкой — S3 сам блокирует конкурентную запись",
+    "Оба apply выполнятся успешно: Terraform умеет мержить state-файлы как git",
+    "Оба прочитают один state, применят изменения, один перезапишет state другого — итоговый state не отразит часть реальных ресурсов",
+    "Второй apply завершится без изменений — он увидит что первый уже запущен через метаданные S3"
   ]}
   correct={2}
-  explanation="Terraform сравнивает state с реальным состоянием облака при каждом plan. Бакет есть в tfstate, но не существует в AWS — plan выведет +1 к созданию. Никакого ручного refresh не нужно начиная с Terraform 0.15."
+  explanation="S3 не предоставляет атомарных блокировок для Terraform. Оба процесса прочитают один и тот же state-файл, применят свои изменения в cloud, и последний записавший перезапишет state первого. Ресурсы, созданные первым apply, могут не попасть в финальный state — следующий plan предложит их пересоздать или удалить. DynamoDB lock решает это: второй apply не стартует пока первый держит lock."
+  label="quiz · 02"
 />
+
+## Шпаргалка
+
+<div className="cheatsheet">
+
+```bash
+# инициализация: скачивает провайдеры, настраивает backend
+terraform init
+terraform init -upgrade   # обновить провайдеры до последних в пределах constraint
+
+# diff конфига с реальностью — читать перед каждым apply
+terraform plan
+terraform plan -out=plan.tfplan           # сохранить plan для apply в CI
+terraform apply plan.tfplan               # применить сохранённый plan (без вопросов)
+
+# применить изменения
+terraform apply
+terraform apply -auto-approve             # только в CI, не на проде руками
+terraform apply -target=aws_s3_bucket.x  # только один ресурс
+
+# уничтожить (осторожно)
+terraform destroy
+terraform destroy -target=aws_instance.staging
+
+# форматирование и валидация
+terraform fmt -recursive
+terraform validate
+
+# состояние state
+terraform state list
+terraform state show aws_s3_bucket.tfstate
+terraform state rm aws_instance.legacy    # убрать из state без удаления в cloud
+terraform state mv module.old module.new  # переименовать без пересоздания
+
+# импорт существующего ресурса в state
+terraform import aws_s3_bucket.legacy my-existing-bucket-name
+
+# пометить ресурс как «нужно пересоздать» при следующем apply
+terraform taint   aws_instance.web   # устарело в 1.0, замена ниже
+terraform apply -replace=aws_instance.web
+
+# workspaces
+terraform workspace list
+terraform workspace new staging
+terraform workspace select prod
+```
+
+</div>
