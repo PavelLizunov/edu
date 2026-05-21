@@ -404,6 +404,8 @@ button {
   letter-spacing: -0.04em;
   margin: 0 0 18px;
   color: var(--ink);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .hero h1 .pop {
@@ -839,6 +841,8 @@ button {
   letter-spacing: -0.03em;
   color: var(--ink);
   margin: 0 0 14px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .topic-head h1 .hash {
@@ -905,6 +909,10 @@ button {
   padding: 1px 6px;
   border-radius: 5px;
   border: 2px solid var(--ink);
+  /* Long technical identifiers (CERTIFICATE_VERIFY_FAILED, db.collection.bulkWrite)
+     must wrap on narrow screens — break inside the token if needed. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .topic-body p {
@@ -1351,6 +1359,13 @@ button {
   padding: 0 5px;
   border-radius: 4px;
   color: var(--ink);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.topic-body .pitfalls li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* ─── DECISION TABLE ─── */
@@ -1416,6 +1431,14 @@ button {
 @media (max-width: 640px) {
   .topic-body table tbody td:first-child {
     white-space: normal;
+  }
+  /* Tables get a horizontal-scroll wrapper at narrow widths so we don't
+     blow out the body. The 3px ink border + 12px radius stay on the wrapper. */
+  .topic-body table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+    font-size: 13.5px;
   }
 }
 
@@ -1497,6 +1520,14 @@ button {
   letter-spacing: -0.015em;
   margin: 18px 0 18px;
   color: var(--cream);
+  /* Long technical terms in questions must wrap on mobile */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.quiz .opt {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .quiz .options {
@@ -1701,7 +1732,7 @@ footer.bigfoot .cols {
   font-size: 13px;
 }
 
-footer.bigfoot .cols h4 {
+footer.bigfoot .cols h3 {
   font-family: var(--mono);
   font-weight: 700;
   font-size: 11px;
@@ -1835,6 +1866,15 @@ footer.bigfoot .legal {
   .section { padding: 32px 0; }
   .marquee { font-size: 11px; }
   .section-h .num { font-size: 60px; }
+}
+
+/* Narrow viewports: shrink display typography so long words like #PostgreSQL
+   и "edu.ninitux" don't overflow horizontally. */
+@media (max-width: 480px) {
+  .hero h1        { font-size: clamp(36px, 12vw, 48px); }
+  .topic-head h1  { font-size: clamp(36px, 11vw, 56px); }
+  footer.bigfoot .huge { font-size: clamp(48px, 14vw, 72px); }
+  .quiz .q        { font-size: 18px; }
 }
 
 /* ─── Coming-soon block (used if/when topic stubs appear) ─── */

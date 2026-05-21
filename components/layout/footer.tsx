@@ -12,9 +12,9 @@ export function Footer() {
       </div>
       <div className="cols">
         <div>
-          <h4>
+          <h3>
             <T ru="часть сети" en="part of" />
-          </h4>
+          </h3>
           <p>
             <a href="https://ninitux.com">ninitux.com</a>
           </p>
@@ -26,9 +26,9 @@ export function Footer() {
           </p>
         </div>
         <div>
-          <h4>
+          <h3>
             <T ru="код" en="source" />
-          </h4>
+          </h3>
           <p>
             <a
               href="https://github.com/PavelLizunov/edu"
@@ -41,9 +41,9 @@ export function Footer() {
           <p style={{ color: "rgba(255,255,255,0.6)" }}>MIT · open</p>
         </div>
         <div>
-          <h4>
+          <h3>
             <T ru="формат" en="format" />
-          </h4>
+          </h3>
           <p>
             <T ru="аналогия → концепции" en="analogy → concepts" />
           </p>
@@ -52,9 +52,9 @@ export function Footer() {
           </p>
         </div>
         <div>
-          <h4>
+          <h3>
             <T ru="автор" en="maintainer" />
-          </h4>
+          </h3>
           <p>P. Lizunov</p>
           <p>
             <a
