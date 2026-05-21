@@ -1235,6 +1235,69 @@ button {
   box-shadow: 5px 5px 0 var(--blue);
 }
 
+/* ─── MERMAID variant: same wrapper styling, SVG inside ─── */
+
+.diagram-mermaid {
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: 5px 5px 0 var(--blue);
+  overflow-x: auto;
+  text-align: center;
+  min-height: 80px;
+}
+
+.diagram-mermaid svg {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+
+/* Pin node text to our heavy display font + sticker borders */
+.diagram-mermaid .node rect,
+.diagram-mermaid .node circle,
+.diagram-mermaid .node polygon,
+.diagram-mermaid .node path {
+  stroke: var(--ink) !important;
+  stroke-width: 2.5px !important;
+}
+
+.diagram-mermaid .edgeLabel {
+  background: var(--cream) !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-family: var(--mono) !important;
+}
+
+.diagram-mermaid .label {
+  font-family: var(--mono) !important;
+  font-weight: 600;
+  color: var(--ink) !important;
+}
+
+.diagram-mermaid-skeleton {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-mute);
+  text-align: center;
+  padding: 24px 0;
+  background: var(--paper);
+  border: 3px dashed var(--border-strong, rgba(10, 9, 7, 0.2));
+  border-radius: 12px;
+}
+
+.diagram-mermaid-error {
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: #FFD2CC;
+  border: 2px solid var(--red);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+}
+
 /* ─── PITFALLS LIST (◆ markers, slightly tightened) ─── */
 
 .topic-body .pitfalls {

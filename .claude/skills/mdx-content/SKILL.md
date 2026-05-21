@@ -105,15 +105,43 @@ Markdown-таблица для решений:
 Доступные иконки (`components/icon.tsx`):
 `AlertTriangle Archive ArrowRight Boxes BookOpen Cable Check Cloud Container Copy Cpu Database FileCode FileText Filter GitBranch Globe HardDrive Hash Key KeyRound Layers Lightbulb Link ListTree Lock Moon Network Package Pickaxe Pipette Play Plug RefreshCw Repeat RotateCcw Route Search Server Settings Shield ShieldCheck Shuffle Sun Table Tag Terminal TrendingUp Workflow Zap`
 
-### `<Diagram>`
+### Диаграммы
+
+**Дефолт — `<MermaidDiagram>`** (текст → реальный SVG с авто-layout, v4-палитра):
+
 ```mdx
-<Diagram label="OPTIONAL CAPTION" code={`
-ASCII-схема в template-literal (так MDX не парсит { } внутри).
+<MermaidDiagram label="control plane → data plane" code={`
+flowchart TD
+  U([kubectl apply]) --> API[API Server]
+  API <--> ETCD[(etcd)]
+  API --> SCH[Scheduler]
+  SCH --> N1[Node 1<br/>kubelet → Pod]
+  CLI([клиент]) --> SVC{{Service}}
+  SVC --> N1
 `} />
 ```
-- Cream-фон, синий offset shadow — визуально отличается от code-блоков
-- Используй для **концептуальных схем**: связи компонентов, пайплайны, layering
-- Ширина ≤ 70 символов
+
+Mermaid типы для нашего контента:
+- `flowchart TD/LR` — архитектурные схемы, пайплайны
+- `sequenceDiagram` — handshakes, request flows (TLS, OAuth)
+- `stateDiagram-v2` — жизненные циклы (Pod, transaction)
+- `erDiagram` — схемы БД
+
+Mermaid формы узлов (используй их семантически):
+- `[прямоугольник]` — обычный шаг/компонент
+- `([овал])` — старт / конец
+- `[(цилиндр)]` — БД / хранилище
+- `{{шестиугольник}}` — сервис / прокси
+- `{ромб}` — условие
+- `((круг))` — узел сети
+
+**Запасной — `<Diagram>` для простого ASCII**, когда нужен фиксированный layout:
+```mdx
+<Diagram label="..." code={`
+  A → B → C
+`} />
+```
+Используй редко, в основном Mermaid.
 
 ### Код — **markdown-fenced**, не `<CodeBlock>`
 ```mdx
