@@ -111,7 +111,8 @@ async function testAllTopicsRender() {
     const url = `${TARGET}/devops/${slug}`;
     const res = await page.goto(url, { waitUntil: "networkidle2" });
     const status = res?.status() ?? 0;
-    if (status !== 200) {
+    // 200 = fresh, 304 = cached, both indicate route serves OK
+    if (status !== 200 && status !== 304) {
       fail(`topic ${slug}`, `HTTP ${status}`);
       continue;
     }
@@ -129,9 +130,19 @@ async function testAllTopicsRender() {
 async function testQuizInteraction() {
   const page = await newPage(1400, 1200);
   await page.goto(`${TARGET}/devops/kubernetes`, { waitUntil: "networkidle2" });
-  await page.$eval(".quiz", (el) => el.scrollIntoView({ block: "center" }));
+  // Scope to FIRST quiz only — topic pages now have multiple quizzes.
+  // :first-of-type matches the first element of the SAME TAG TYPE among
+  // siblings, not the first match of a class — so we use the array form.
+  const quizzes = await page.$$(".quiz");
+  if (quizzes.length === 0) {
+    fail("quiz initial state", "no .quiz found on page");
+    await page.close();
+    return;
+  }
+  const firstQuiz = quizzes[0];
+  await firstQuiz.evaluate((el) => el.scrollIntoView({ block: "center" }));
 
-  const optsBefore = await page.$$eval(".quiz .opt", (els) =>
+  const optsBefore = await firstQuiz.$$eval(".opt", (els) =>
     els.map((e) => ({ disabled: (e as HTMLButtonElement).disabled, state: e.getAttribute("data-state") }))
   );
   if (optsBefore.every((o) => !o.disabled && o.state === null)) {
@@ -140,14 +151,21 @@ async function testQuizInteraction() {
     fail("quiz initial state", JSON.stringify(optsBefore));
   }
 
-  // Click first option (which is incorrect for Kubernetes quiz)
-  await page.click(".quiz .opt:nth-of-type(1)");
+  const firstOpt = await firstQuiz.$(".opt:nth-of-type(1)");
+  if (!firstOpt) {
+    fail("quiz after click", "no .opt:nth-of-type(1) found in first quiz");
+    await page.close();
+    return;
+  }
+  await firstOpt.click();
   await new Promise((r) => setTimeout(r, 300));
 
-  const optsAfter = await page.$$eval(".quiz .opt", (els) =>
+  const optsAfter = await firstQuiz.$$eval(".opt", (els) =>
     els.map((e) => ({ disabled: (e as HTMLButtonElement).disabled, state: e.getAttribute("data-state") }))
   );
-  const explainVisible = await page.$eval(".quiz .explain", (el) => !el.hasAttribute("hidden")).catch(() => false);
+  const explainVisible = await firstQuiz
+    .$eval(".explain", (el) => !el.hasAttribute("hidden"))
+    .catch(() => false);
   const someCorrect = optsAfter.some((o) => o.state === "correct");
   const allDisabled = optsAfter.every((o) => o.disabled);
   if (someCorrect && allDisabled && explainVisible) {

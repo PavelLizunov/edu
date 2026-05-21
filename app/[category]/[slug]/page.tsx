@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { compileMDX } from "next-mdx-remote/rsc";
+import remarkGfm from "remark-gfm";
 import {
   getAllTopicParams,
   getTopic,
@@ -51,6 +52,11 @@ export default async function TopicPage({ params }: PageProps) {
     components: mdxComponents,
     options: {
       parseFrontmatter: false,
+      mdxOptions: {
+        // remark-gfm enables GitHub-flavoured markdown: tables, strikethrough,
+        // task lists, autolinks. Needed for our "Когда что выбирать" tables.
+        remarkPlugins: [remarkGfm],
+      },
     },
   });
 

@@ -4,6 +4,7 @@ import type { MDXComponents } from "mdx/types";
 import { AnalogyBox } from "@/components/wiki/analogy-box";
 import { ConceptCard, ConceptGrid } from "@/components/wiki/concept-card";
 import { CodeBlock } from "@/components/wiki/code-block";
+import { Diagram } from "@/components/wiki/diagram";
 import { QuizCard } from "@/components/wiki/quiz-card";
 
 interface CodeChildProps {
@@ -46,6 +47,7 @@ export const mdxComponents: MDXComponents = {
   ConceptCard,
   ConceptGrid,
   CodeBlock,
+  Diagram,
   QuizCard,
   // Markdown-fenced code blocks render via our styled CodeBlock too.
   pre: PreOverride,
